@@ -1,0 +1,33 @@
+{
+  "name": "newsportal",
+  "version": "1.0.0",
+  "description": "This is a news portal, where user can read the trending news categorized by different topics. The portal provides a user-friendly interface to browse through the latest news articles, view detailed information, and stay updated with current events. Users can also search for specific news topics and filter articles based on their interest",
+  "keywords": [
+    "nodejs",
+    "expressjs",
+    "mongodb",
+    "dotenv",
+    "jsonwebtoken",
+    "mongoose",
+    "restfulapi"
+  ],
+  "license": "ISC",
+  "author": "Alladi Amulya",
+  "type": "commonjs",
+  "main": "server.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node server.js",
+    "dev": "nodemon server.js"
+  },
+  "dependencies": {
+    "bcrypt": "^6.0.0",
+    "cookie-parser": "^1.4.7",
+    "dotenv": "^17.4.2",
+    "express": "^5.2.1",
+    "express-validator": "^7.3.2",
+    "jsonwebtoken": "^9.0.3",
+    "mongoose": "^9.9.0",
+    "nodemailer": "^9.0.3"
+  }
+}

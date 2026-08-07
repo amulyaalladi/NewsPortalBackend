@@ -45,7 +45,7 @@ const authController={
                     return response.status(500).json({message:"please enter email and password"})
                 }
 
-                const existingUser=await User.findOne({email});
+                const user=await User.findOne({email});
                 if(!existingUser){
                     return response.status(500).json({message:"user not found!"})
                 }

@@ -50,12 +50,12 @@ const authController={
                     return response.status(500).json({message:"user not found!"})
                 }
 
-                const isValidPassword=await bcrypt.compare(password,existingUser.password);
+                const isValidPassword=await bcrypt.compare(password,user.password);
                 if(!isValidPassword){
                     return response.status(500).json({message:"password incorrect!"})
                 }
 
-                const token=await jwt.sign({userId:existingUser._id,},JWT_SECRET,{expiresIn:'1h'})
+                const token=await jwt.sign({userId:user._id,},JWT_SECRET,{expiresIn:'1h'})
 
                 response.cookie('token',token,{
                     httpOnly:true,

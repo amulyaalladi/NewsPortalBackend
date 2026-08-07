@@ -64,8 +64,18 @@ const authController={
                     maxAge:3600000
                 })
 
-                return response.status(200).json({message:"login successful"})
-            }  catch (e) {
+                return response.status(200).json({
+                    
+                message: "User logged in successfully",
+                user: {
+                    id: user._id,
+                    name: user.name,
+                    email: user.email,
+                    role: user.role,
+                    assignedCompany: user.assignedCompany || null
+            }
+        })
+    }catch(e) {
                 return response.status(500).json({message:e.message});
                 
             }

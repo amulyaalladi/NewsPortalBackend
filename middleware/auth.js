@@ -14,7 +14,7 @@ const isAuthenticated = async (request, response, next) => {
 
     try {
         // if there is a token, verify it using jwt.verify() method
-        const decoded = jwt.verify(token, JWT_SECRET);
+        const decoded = await jwt.verify(token, JWT_SECRET);
 
         // if the token is valid, get the userId from the token payload
         const userId = decoded.userId;

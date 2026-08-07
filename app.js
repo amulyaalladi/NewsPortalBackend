@@ -13,7 +13,10 @@ const app = express();
 // parse req body
 app.use(cookieParser());
 app.use(express.json());
-app.use(cors());
+app.use(cors({
+  origin: 'https://realtimenews1.netlify.app', 
+  credentials: true, // allow cookies to be sent
+}));
 
 app.use('/api/v1/auth', authRouter);
 app.use('/api/v1/news', newsRouter);

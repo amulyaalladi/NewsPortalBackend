@@ -90,7 +90,7 @@ const authController={
             const user = await User.findById(userId).select('-password -__v');
 
             // send the user object as a response
-            return response.status(200).json(user);
+            return response.status(200).json({user});
         },
         updateProfile: async(request,response)=>{
             try {

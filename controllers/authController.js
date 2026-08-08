@@ -81,8 +81,8 @@ const authController={
             }
         },
         //get profile for loggedin user
-        me: async(request,response)=>{
-           //return response.status(200).json({ message: "me route" });
+       me: async (request, response) => {
+        try {
             // get the user id from the request object
             const userId = request.userId;
 
@@ -91,7 +91,10 @@ const authController={
 
             // send the user object as a response
             return response.status(200).json({user});
-        },
+        } catch (e) {
+            return response.status(500).json({ message: e.message });
+        }
+    },
         updateProfile: async(request,response)=>{
             try {
                 const userId = request.userId;

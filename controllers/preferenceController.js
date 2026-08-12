@@ -50,14 +50,9 @@ const updatePreferences = async (req, res) => {
     }
 
     const preferences = await Preferences.findOneAndUpdate(
-      { user: userId },
-      {
-        ...(darkMode !== undefined && { darkMode }),
-        ...(preferredCategories !== undefined && { preferredCategories }),
-        ...(notificationChannel !== undefined && { notificationChannel }),
-        ...(notificationFrequency !== undefined && { notificationFrequency }),
-      },
-      { new: true, upsert: true, setDefaultsOnInsert: true }
+      { _id:userId},
+      {name,email},
+      {new:true}
     );
 
     res.status(200).json({

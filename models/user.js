@@ -40,7 +40,7 @@ const userSchema=new mongoose.Schema({
       default:"none"
     },
     subscribedCategories:[{
-      type:mongoose.Schema.Types.ObjectId,
+      type:[String],
       ref:"Category"
     },
   ],

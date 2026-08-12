@@ -18,7 +18,7 @@ notificationRouter.get('/', isAuthenticated, async (request, response) => {
   }
 });
 
-notificationRouter.post('/', isAuthenticated, notificationController.createNotification);
+//notificationRouter.post('/', isAuthenticated, notificationController.createNotification);
 notificationRouter.post('/send-category', isAuthenticated, async (request, response) => {
   try {
     await notificationController.sendCategoryNotifications(request.body.newsItem);

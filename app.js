@@ -7,6 +7,7 @@ const userRouter = require('./routers/userRouter');
 const categoryRouter = require('./routers/categoryRouter');
 const editorRouter = require('./routers/editorRouter');
 const adminRouter = require('./routers/adminRouter');
+const PreferencesRouter=require('./routers/PreferencesRoutes');
 
 const app = express();
 
@@ -35,7 +36,8 @@ app.use(cors({
 app.use('/api/v1/auth', authRouter);
 app.use('/api/v1/news', newsRouter);
 app.use('/api/v1/users', userRouter);
-app.use('/api/v1/admin',adminRouter)
+app.use('/api/v1/admin',adminRouter);
+app.use('/api/v1/preferences',PreferencesRouter);
 app.use('/api/v1/categories', categoryRouter);
 app.use('/api/v1/editors', editorRouter);
 

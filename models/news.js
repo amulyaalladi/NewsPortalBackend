@@ -1,34 +1,33 @@
-const mongoose=require('mongoose');
+const mongoose = require('mongoose');
 
-const newsSchema=new mongoose.Schema({
-    title:{
-        type:String,
-        required:true,
-    },
-    content:{
-        type:String,
+const newsSchema = new mongoose.Schema({
+    title: {
+        type: String,
         required: true,
     },
-    category:{
-        type:mongoose.Schema.Types.ObjectId,
-        ref:"Category",
+    content: {
+        type: String,
+        required: true,
+    },
+    category: {
+        type: String,      // ✅ Changed from ObjectId to String
         required: true
     },
-    image:{
-        type:String
+    image: {
+        type: String
     },
-    tags:[
+    tags: [
         {
-            type:String
+            type: String
         },
     ],
-    author:{
-         type: mongoose.Schema.Types.ObjectId,
-       ref:"User"
+    author: {
+        type: String       // ✅ Changed from ObjectId to String
     },
 },
     {
         timestamps: true
-    },
-)
-module.exports=mongoose.model('New',newsSchema,'news');
+    }
+);
+
+module.exports = mongoose.model('New', newsSchema, 'news');

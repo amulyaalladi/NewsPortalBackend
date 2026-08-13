@@ -9,12 +9,11 @@
 
 const axios = require('axios');
 const New = require('../models/news');
-
+const {NEWS_API_KEY,NEWS_API_BASE}=require('../utlis/config')
 
 require('dotenv').config();
 
-const NEWS_API_BASE = 'https://newsapi.org/v2';
-const NEWS_API_KEY = process.env.NEWS_API_KEY;
+
 
 // NewsAPI's top-headlines categories.
 const CATEGORIES = [

@@ -18,6 +18,7 @@ app.use(cookieParser());
 app.use(express.json());
 
 
+// app.js
 const allowedOrigins = [
   'http://localhost:5173',
   'https://realtimenews1.netlify.app'

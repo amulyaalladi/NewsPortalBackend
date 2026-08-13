@@ -32,7 +32,14 @@ newsRouter.use(allowRoles(['admin', 'editor']));
 newsRouter.post('/',createNews);
 newsRouter.put('/:id',updateNews);
 newsRouter.delete('/:id',deleteNews);
-newsRouter.post('/fetch-external',fetchExternalNews);
+//newsRouter.post('/fetch-external',fetchExternalNews);
+
+// newsRouter.js
+// Temporarily move here to populate DB easily:
+newsRouter.post('/fetch-external', fetchExternalNews);
+
+newsRouter.use(isAuthenticated);
+newsRouter.use(allowRoles(['admin', 'editor']));
 
 
 

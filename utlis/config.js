@@ -7,7 +7,8 @@ const PORT= process.env.PORT
 const SALT_ROUNDS=process.env.SALT_ROUNDS;
 const JWT_SECRET=process.env.JWT_SECRET;
 const SMTP_USER=process.env.SMTP_USER;
-const SMTP_PASS=process.env.SMTP_PASS;                                                                               
+const SMTP_PASS=process.env.SMTP_PASS;
+const NEWS_API_KEY=process.env.NEWS_API_KEY                                                                             
 module.exports={
     MONGODB_URI,
     ENV,

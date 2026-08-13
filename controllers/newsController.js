@@ -3,7 +3,7 @@ const User = require('../models/user');
 const bcrypt = require('bcrypt');
 const { SALT_ROUNDS } = require('../utlis/config');
 const { sendCategoryNotifications } = require('./notificationController');
-const { ingestCategory, ingestAllCategories } = require('../services/newsIngestionService');
+const { ingestCategory, ingestAllCategories } = require('../services/NewsIngestionService');
 
 const newsController = {
   createNews: async (request, response) => {

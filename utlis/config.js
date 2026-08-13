@@ -8,7 +8,8 @@ const SALT_ROUNDS=process.env.SALT_ROUNDS;
 const JWT_SECRET=process.env.JWT_SECRET;
 const SMTP_USER=process.env.SMTP_USER;
 const SMTP_PASS=process.env.SMTP_PASS;
-const NEWS_API_KEY=process.env.NEWS_API_KEY                                                                             
+const NEWS_API_KEY=process.env.NEWS_API_KEY;
+const NEWS_API_URL=process.eventNames.NEWS_API_URL                                                                           
 module.exports={
     MONGODB_URI,
     ENV,
@@ -17,5 +18,7 @@ module.exports={
     SALT_ROUNDS,
     JWT_SECRET,
     SMTP_USER,
-    SMTP_PASS
+    SMTP_PASS,
+    NEWS_API_KEY,
+    NEWS_API_URL
 }

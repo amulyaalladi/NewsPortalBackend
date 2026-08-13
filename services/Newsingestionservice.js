@@ -10,6 +10,7 @@
 const axios = require('axios');
 const New = require('../models/news');
 
+
 require('dotenv').config();
 
 const NEWS_API_BASE = 'https://newsapi.org/v2';

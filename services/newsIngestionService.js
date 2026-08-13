@@ -9,9 +9,10 @@
 
 const axios = require('axios');
 const New = require('../models/news');
-const {NEWS_API_KEY,NEWS_API_BASE}=require('../utlis/config')
-
 require('dotenv').config();
+const {NEWS_API_KEY,NEWS_API_URL}=require('../utlis/config')
+
+
 
 
 
@@ -40,12 +41,22 @@ const fetchCategoryFromNewsAPI = async (category, country = 'us', pageSize = 20)
     throw new Error('NEWS_API_KEY is not set in the backend .env file');
   }
 
-  const response = await axios.get(`${NEWS_API_BASE}/top-headlines`, {
-    params: { category, country, pageSize, apiKey: NEWS_API_KEY },
-  });
+  const cleanKey = NEWS_API_KEY.trim();
 
-  return response.data.articles || [];
-};
+  try {
+    const response = await axios.get(`${NEWS_API_BASE}/top-headlines`, {
+      params: { category, country, pageSize, apiKey: cleanKey },
+      headers: { 'User-Agent': 'NewsIngestionService/1.0' }
+    });
+    return response.data.articles || [];
+  } catch (error) {
+   
+    throw error;
+  }
+}
+
+
+
 
 // Skips articles with no title (NewsAPI occasionally returns "[Removed]"
 // placeholder entries) and skips anything already stored (matched by

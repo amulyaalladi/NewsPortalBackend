@@ -1,45 +1,36 @@
-const mongoose = require("mongoose");
+const mongoose = require('mongoose');
 
 const notificationSchema = new mongoose.Schema(
   {
+    user: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      required: true,
+      index: true // Indexed for fast queries when loading a user's notifications
+    },
     title: {
       type: String,
       required: true,
+      trim: true
     },
-
     message: {
       type: String,
       required: true,
+      trim: true
     },
-
-    news: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "News",
+    read: {
+      type: Boolean,
+      default: false
     },
-
-    category: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Category",
-    },
-
-    sentTo: [
-      {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "User",
-      },
-    ],
-
-    sentAt: {
-      type: Date,
-      default: Date.now,
-    },
+    // Optional field to link a notification directly to a news article
+    articleUrl: {
+      type: String,
+      default: ''
+    }
   },
   {
-    timestamps: true,
+    timestamps: true
   }
 );
 
-module.exports = mongoose.model(
-  "Notification",
-  notificationSchema
-);
+module.exports = mongoose.model('Notification', notificationSchema);

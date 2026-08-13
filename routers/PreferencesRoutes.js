@@ -1,10 +1,17 @@
-const express = require("express");
-//const router = express.Router();
-const { getPreferences, updatePreferences } = require("../controllers/preferenceController");
-const { isAuthenticated } = require("../middleware/auth");
+const express = require('express');
+const router = express.Router();
 
-const preferenceRouter=express.Router()
-preferenceRouter.get("/", isAuthenticated, getPreferences);
-preferenceRouter.put("/", isAuthenticated, updatePreferences);
+// 1. Import controller functions
+const { getPreferences, updatePreferences } = require('../controllers/preferenceController'); 
 
-module.exports = preferenceRouter;
+// 2. Import auth middleware
+const { isAuthenticated } = require('../middleware/auth'); 
+
+// Apply authentication to all preference routes
+router.use(isAuthenticated);
+
+// Define routes
+router.get('/', getPreferences);
+router.put('/', updatePreferences);
+
+module.exports = router;

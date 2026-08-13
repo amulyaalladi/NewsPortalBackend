@@ -10,7 +10,9 @@
 const axios = require('axios');
 const New = require('../models/news');
 require('dotenv').config();
-const {NEWS_API_KEY,NEWS_API_URL}=require('../utlis/config')
+const {NEWS_API_KEY,NEWS_API_URL}=require('../utlis/config');
+const Subscriber = require('../models/subscriber');
+const { sendNewsEmail } = require('../utlis/mailer');
 
 
 
@@ -57,19 +59,54 @@ const fetchCategoryFromNewsAPI = async (category, country = 'us', pageSize = 20)
 
 
 const saveArticlesToDb = async (articles) => {
-  let savedCount = 0;
-  for (const article of articles) {
-    if (!article.title) continue;
+    let newlyInsertedArticles = [];
 
-    // Avoid duplicate articles by matching on the unique title
-    await News.updateOne(
-      { title: article.title },
-      { $setOnInsert: article },
-      { upsert: true }
-    );
-    savedCount++;
-  }
-  return savedCount;
+    for (const article of articles) {
+        if (!article.title) continue;
+
+        // Upsert to avoid duplicate articles
+        const result = await News.updateOne(
+            { title: article.title },
+            { $setOnInsert: article },
+            { upsert: true }
+        );
+
+        // If upsertedCount > 0, this article was newly created in MongoDB!
+        if (result.upsertedCount > 0) {
+            newlyInsertedArticles.push(article);
+        }
+    }
+
+    // Trigger immediate Brevo email alerts for any brand-new articles
+    if (newlyInsertedArticles.length > 0) {
+        await notifyImmediateSubscribers(newlyInsertedArticles);
+    }
+
+    return newlyInsertedArticles.length;
+};
+
+
+const notifyImmediateSubscribers = async (newArticles) => {
+    try {
+        // 1. Fetch all subscribers who chose "immediate" delivery
+        const immediateSubscribers = await Subscriber.find({ frequency: 'immediate' });
+
+        if (!immediateSubscribers || immediateSubscribers.length === 0) return;
+
+        // 2. Loop through each subscriber and check for matching category preferences
+        for (const subscriber of immediateSubscribers) {
+            const matchingArticles = newArticles.filter(article => 
+                subscriber.categories.includes(article.category)
+            );
+
+            // 3. If matching articles exist, send an email alert via Brevo
+            if (matchingArticles.length > 0) {
+                await sendNewsEmail(subscriber.email, matchingArticles);
+            }
+        }
+    } catch (error) {
+        console.error("❌ Error notifying immediate subscribers:", error.message);
+    }
 };
 
 
@@ -123,4 +160,4 @@ const ingestAllCategories = async (options = {}) => {
   return results;
 };
 
-module.exports = { ingestCategory, ingestAllCategories, CATEGORIES };
+module.exports = { ingestCategory, ingestAllCategories, CATEGORIES, saveArticlesToDb };

@@ -1,33 +1,38 @@
-const mongoose = require("mongoose");
+const mongoose = require('mongoose');
 
-const preferencesSchema = new mongoose.Schema(
+const preferenceSchema = new mongoose.Schema(
   {
     user: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
+      ref: 'User',
       required: true,
-      unique: true,
+      unique: true // Guarantees one preference document per user
     },
     darkMode: {
       type: Boolean,
-      default: true,
+      default: false
     },
-    preferredCategories: {
-      type: [String],
-      default: [],
-    },
+    preferredCategories: [
+      {
+        type: String,
+        lowercase: true,
+        trim: true
+      }
+    ],
     notificationChannel: {
       type: String,
-      enum: ["email", "push"],
-      default: "email",
+      enum: ['email', 'push', 'none'],
+      default: 'email'
     },
     notificationFrequency: {
       type: String,
-      enum: ["immediate", "hourly", "daily"],
-      default: "immediate",
-    },
+      enum: ['immediate', 'hourly', 'daily'],
+      default: 'immediate'
+    }
   },
-  { timestamps: true }
+  {
+    timestamps: true
+  }
 );
 
-module.exports = mongoose.model("Preferences", preferencesSchema);
+module.exports = mongoose.model('Preference', preferenceSchema);

@@ -10,6 +10,7 @@ const adminRouter = require('./routers/adminRouter');
 const notificationService=require('./services/notificationService')
 const PreferencesRoutes=require('./routers/PreferencesRoutes');
 
+
 const app = express();
 
 // parse req body
@@ -42,5 +43,6 @@ app.use('/api/v1/preferences',PreferencesRoutes);
 app.use('/api/v1/notifications',notificationService)
 app.use('/api/v1/categories', categoryRouter);
 app.use('/api/v1/editors', editorRouter);
+
 
 module.exports = app;

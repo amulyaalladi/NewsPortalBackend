@@ -3,6 +3,7 @@ const User = require('../models/user');
 const bcrypt = require('bcrypt');
 const { SALT_ROUNDS } = require('../utlis/config');
 const { sendCategoryNotifications } = require('./notificationController');
+const { ingestCategory, ingestAllCategories } = require('../services/newsIngestionService');
 
 const newsController = {
   createNews: async (request, response) => {
@@ -95,7 +96,33 @@ const newsController = {
 
   searchNews: async (request, response) => {
     try {
-      return response.status(200).json({ message: 'News result' });
+      const { q, category, page = 1, pageSize = 12 } = request.query;
+      const filter = {};
+
+      if (q) {
+        filter.$or = [
+          { title: { $regex: q, $options: 'i' } },
+          { content: { $regex: q, $options: 'i' } },
+        ];
+      }
+      if (category) {
+        filter.category = category;
+      }
+
+      const pageNum = Math.max(1, parseInt(page, 10) || 1);
+      const limit = Math.max(1, parseInt(pageSize, 10) || 12);
+      const skip = (pageNum - 1) * limit;
+
+      const [articles, totalResults] = await Promise.all([
+        New.find(filter).sort({ createdAt: -1 }).skip(skip).limit(limit),
+        New.countDocuments(filter),
+      ]);
+
+      // NOTE: shape is { articles, totalResults } at the top level to match
+      // Home.jsx's `const { articles, totalResults } = await searchNews(...)`.
+      // Adjust here (or in newsServices.js) if your frontend unwraps a
+      // differently-shaped response.
+      return response.status(200).json({ articles, totalResults });
     } catch (e) {
       return response.status(500).json({ message: e.message });
     }
@@ -103,7 +130,19 @@ const newsController = {
 
   getNewsByCategory: async (request, response) => {
     try {
-      return response.status(200).json({ message: 'News result' });
+      const { category } = request.params;
+      const { page = 1, pageSize = 10 } = request.query;
+
+      const pageNum = Math.max(1, parseInt(page, 10) || 1);
+      const limit = Math.max(1, parseInt(pageSize, 10) || 10);
+      const skip = (pageNum - 1) * limit;
+
+      const [articles, totalResults] = await Promise.all([
+        New.find({ category }).sort({ createdAt: -1 }).skip(skip).limit(limit),
+        New.countDocuments({ category }),
+      ]);
+
+      return response.status(200).json({ articles, totalResults });
     } catch (e) {
       return response.status(500).json({ message: e.message });
     }
@@ -120,6 +159,23 @@ const newsController = {
     try {
       const news = await New.find().sort({ createdAt: -1 }).limit(5);
       return response.status(200).json({ message: 'Trending News retrieved!', result: news });
+    } catch (e) {
+      return response.status(500).json({ message: e.message });
+    }
+  },
+
+  // Pulls fresh articles from NewsAPI and stores them in our DB.
+  // POST /news/fetch-external                     -> ingests every category
+  // POST /news/fetch-external?category=technology  -> ingests one category
+  fetchExternalNews: async (request, response) => {
+    try {
+      const { category } = request.query;
+
+      const result = category
+        ? await ingestCategory(category)
+        : await ingestAllCategories();
+
+      return response.status(200).json({ message: 'News ingestion complete', result });
     } catch (e) {
       return response.status(500).json({ message: e.message });
     }

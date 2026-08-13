@@ -1,6 +1,7 @@
 const express = require('express');
 const { register, login, logout,me, updateProfile } = require('../controllers/authController');
 const { isAuthenticated } = require('../middleware/auth');
+const newsRouter = require('./newsRouter');
 
 const authRouter = express.Router();
 
@@ -9,6 +10,7 @@ authRouter.post('/register', register);
 authRouter.post('/login', login);
 
 // protected routes
+authRouter.get('/news',isAuthenticated)
 authRouter.get('/me', isAuthenticated, me);
 authRouter.put('/profile',isAuthenticated,updateProfile)
 authRouter.post('/logout', isAuthenticated, logout);

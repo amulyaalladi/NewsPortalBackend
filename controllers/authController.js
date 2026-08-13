@@ -80,6 +80,7 @@ const authController={
                 
             }
         },
+        //get news /home
         //get profile for loggedin user
        me: async (request, response) => {
         try {

@@ -6,13 +6,15 @@ const HOST= process.env.HOST;
 const PORT= process.env.PORT
 const SALT_ROUNDS=process.env.SALT_ROUNDS;
 const JWT_SECRET=process.env.JWT_SECRET;
-const EMAIL_USER=process.env.EMAIL_USER;
-const EMAIL_PASS=process.env.EMAIL_PASS                                                                               
+const SMTP_USER=process.env.SMTP_USER;
+const SMTP_PASS=process.env.SMTP_PASS;                                                                               
 module.exports={
     MONGODB_URI,
     ENV,
     HOST,
     PORT,
     SALT_ROUNDS,
-    JWT_SECRET
+    JWT_SECRET,
+    SMTP_USER,
+    SMTP_PASS
 }

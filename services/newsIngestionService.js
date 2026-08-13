@@ -56,6 +56,22 @@ const fetchCategoryFromNewsAPI = async (category, country = 'us', pageSize = 20)
 }
 
 
+const saveArticlesToDb = async (articles) => {
+  let savedCount = 0;
+  for (const article of articles) {
+    if (!article.title) continue;
+
+    // Avoid duplicate articles by matching on the unique title
+    await News.updateOne(
+      { title: article.title },
+      { $setOnInsert: article },
+      { upsert: true }
+    );
+    savedCount++;
+  }
+  return savedCount;
+};
+
 
 
 // Skips articles with no title (NewsAPI occasionally returns "[Removed]"

@@ -44,7 +44,7 @@ const fetchCategoryFromNewsAPI = async (category, country = 'us', pageSize = 20)
   const cleanKey = NEWS_API_KEY.trim();
 
   try {
-    const response = await axios.get(`${NEWS_API_BASE}/top-headlines`, {
+    const response = await axios.get(`${NEWS_API_URL}/top-headlines`, {
       params: { category, country, pageSize, apiKey: cleanKey },
       headers: { 'User-Agent': 'NewsIngestionService/1.0' }
     });

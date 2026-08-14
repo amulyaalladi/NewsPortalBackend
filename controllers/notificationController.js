@@ -1,80 +1,141 @@
-const mongoose = require('mongoose');
-const Notification = require('../models/Notification');
+const Notification = require('../models/notification');
+const Preference = require('../models/preferences');
+const { sendEmailNotification } = require('../services/notificationService');
 
-// GET /api/notifications
-const getNotifications = async (req, res) => {
+// GET /api/v1/notifications
+exports.getNotifications = async (req, res) => {
   try {
-    // 1. Guard check for authenticated user object
-    if (!req.user) {
-      return res.status(401).json({ error: 'Unauthorized: User context missing' });
+    // Get user ID from req.user (set by auth middleware) or req.userId
+    const userId = req.user?._id || req.user?.id || req.userId;
+
+    if (!userId) {
+      return res.status(401).json({ message: "Unauthorized access" });
     }
 
-    // 2. Extract user ID (supports Passport, JWT, or custom auth setups)
-    const rawUserId = req.user._id || req.user.id || req.user.userId;
+    const notifications = await Notification.find({ user: userId })
+      .sort({ createdAt: -1 })
+      .lean();
 
-    if (!rawUserId) {
-      return res.status(400).json({ error: 'User identifier not found on request' });
-    }
-
-    // 3. Cast to Mongoose ObjectId
-    const userId = typeof rawUserId === 'string' 
-      ? new mongoose.Types.ObjectId(rawUserId) 
-      : rawUserId;
-
-    // 4. Fetch notifications & unread count
-    const [notifications, unreadCount] = await Promise.all([
-      Notification.find({ userId })
-        .sort({ createdAt: -1 })
-        .limit(50)
-        .lean(),
-      Notification.countDocuments({ userId, isRead: false })
-    ]);
-
-    return res.status(200).json({
-      unreadCount,
-      notifications
-    });
-
+    return res.status(200).json({ success: true, result: notifications || [] });
   } catch (error) {
-    console.error('Error in getNotifications controller:', error);
-    return res.status(500).json({
-      error: 'Failed to fetch notifications',
-      details: error.message
-    });
+    console.error("Error in getNotifications:", error);
+    return res.status(500).json({ message: error.message || "Failed to fetch notifications" });
   }
 };
 
-// PATCH /api/notifications/:id/read
-const markAsRead = async (req, res) => {
+// PATCH /api/v1/notifications/:id/read
+exports.markAsRead = async (req, res) => {
   try {
     const { id } = req.params;
-    const rawUserId = req.user._id || req.user.id || req.user.userId;
+    const userId = req.userId || req.user?._id;
 
-    if (!mongoose.Types.ObjectId.isValid(id)) {
-      return res.status(400).json({ error: 'Invalid notification ID' });
-    }
-
-    const userId = typeof rawUserId === 'string' 
-      ? new mongoose.Types.ObjectId(rawUserId) 
-      : rawUserId;
-
-    const result = await Notification.updateOne(
-      { _id: id, userId },
-      { $set: { isRead: true } }
+    const notification = await Notification.findOneAndUpdate(
+      { _id: id, user: userId },
+      { read: true },
+      { new: true }
     );
 
-    if (result.matchedCount === 0) {
-      return res.status(404).json({ error: 'Notification not found' });
+    if (!notification) {
+      return res.status(404).json({ message: "Notification not found" });
     }
 
-    return res.status(200).json({ success: true });
+    return res.status(200).json(notification);
   } catch (error) {
-    console.error('Error in markAsRead controller:', error);
-    return res.status(500).json({ error: 'Failed to update notification state' });
+    console.error("Error marking notification read:", error);
+    return res.status(500).json({ message: error.message });
   }
 };
 
-module.exports = {
-  getNotifications,
-  markAsRead
+// PATCH /api/v1/notifications/read-all
+exports.markAllAsRead = async (req, res) => {
+  try {
+    const userId = req.userId || req.user?._id;
+
+    await Notification.updateMany(
+      { user: userId, read: false },
+      { $set: { read: true } }
+    );
+
+    return res.status(200).json({ message: "All notifications marked as read" });
+  } catch (error) {
+    console.error("Error marking all read:", error);
+    return res.status(500).json({ message: error.message });
+  }
+};
+
+// Called whenever a news article is created — either manually via
+// newsController.createNews, or via the NewsAPI ingestion pipeline in
+// newsIngestionService.js's storeArticles.
+//
+// 1. Finds every Preference doc subscribed to this article's category.
+// 2. ALWAYS creates an in-app Notification for each matching user,
+//    regardless of their email frequency — the bell icon should always
+//    reflect every relevant article.
+// 3. If a user's channel is 'email' AND frequency is 'immediate', sends
+//    the email right away and marks that notification emailSent: true.
+// 4. Users with frequency 'hourly'/'daily' are left with emailSent: false
+//    — the digest cron job (notificationScheduler.js) will batch and
+//    email those later.
+exports.sendCategoryNotifications = async (news) => {
+  try {
+    if (!news || !news.category) return;
+
+    const matchingPrefs = await Preference.find({
+      preferredCategories: news.category,
+    }).populate('user');
+
+    const validPrefs = matchingPrefs.filter((pref) => pref.user);
+    if (!validPrefs.length) return;
+
+    const title = `New article in ${news.category}`;
+    const message = news.title;
+
+    // 1. Always create in-app notifications for everyone subscribed
+    const notifDocs = await Notification.insertMany(
+      validPrefs.map((pref) => ({
+        user: pref.user._id,
+        title,
+        message,
+        category: news.category,
+        articleUrl: news.image || news.url || '',
+        emailSent: false,
+      }))
+    );
+
+    // 2. Immediately email anyone with channel:'email' + frequency:'immediate'
+    const immediateEmailPrefs = validPrefs.filter(
+      (pref) => pref.notificationChannel === 'email' && pref.notificationFrequency === 'immediate'
+    );
+
+    await Promise.all(
+      immediateEmailPrefs.map((pref) =>
+        sendEmailNotification(
+          pref.user.email,
+          pref.user.name,
+          title,
+          `<p>${message}</p>`
+        )
+      )
+    );
+
+    // 3. Mark those users' just-created notifications as emailed so the
+    // digest job doesn't double-send them later.
+    const immediateUserIds = new Set(
+      immediateEmailPrefs.map((p) => p.user._id.toString())
+    );
+    const idsToMark = notifDocs
+      .filter((doc) => immediateUserIds.has(doc.user.toString()))
+      .map((doc) => doc._id);
+
+    if (idsToMark.length) {
+      await Notification.updateMany(
+        { _id: { $in: idsToMark } },
+        { $set: { emailSent: true } }
+      );
+    }
+  } catch (error) {
+    console.error('Error sending category notifications:', error);
+    // Swallow the error — a notification failure should never block
+    // news creation or ingestion.
+  }
 };

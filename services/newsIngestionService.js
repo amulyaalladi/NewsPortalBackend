@@ -10,13 +10,8 @@
 const axios = require('axios');
 const New = require('../models/news');
 require('dotenv').config();
-const {NEWS_API_KEY,NEWS_API_URL}=require('../utlis/config');
-const Subscriber = require('../models/subscription');
-const { sendNewsEmail } = require('../utlis/mailer');
-
-
-
-
+const { NEWS_API_KEY, NEWS_API_URL } = require('../utlis/config');
+const { sendCategoryNotifications } = require('../controllers/notificationController');
 
 // NewsAPI's top-headlines categories.
 const CATEGORIES = [
@@ -52,68 +47,18 @@ const fetchCategoryFromNewsAPI = async (category, country = 'us', pageSize = 20)
     });
     return response.data.articles || [];
   } catch (error) {
-   
     throw error;
   }
-}
-
-
-const saveArticlesToDb = async (articles) => {
-    let newlyInsertedArticles = [];
-
-    for (const article of articles) {
-        if (!article.title) continue;
-
-        // Upsert to avoid duplicate articles
-        const result = await News.updateOne(
-            { title: article.title },
-            { $setOnInsert: article },
-            { upsert: true }
-        );
-
-        // If upsertedCount > 0, this article was newly created in MongoDB!
-        if (result.upsertedCount > 0) {
-            newlyInsertedArticles.push(article);
-        }
-    }
-
-    // Trigger immediate Brevo email alerts for any brand-new articles
-    if (newlyInsertedArticles.length > 0) {
-        await notifyImmediateSubscribers(newlyInsertedArticles);
-    }
-
-    return newlyInsertedArticles.length;
 };
-
-
-const notifyImmediateSubscribers = async (newArticles) => {
-    try {
-        // 1. Fetch all subscribers who chose "immediate" delivery
-        const immediateSubscribers = await Subscriber.find({ frequency: 'immediate' });
-
-        if (!immediateSubscribers || immediateSubscribers.length === 0) return;
-
-        // 2. Loop through each subscriber and check for matching category preferences
-        for (const subscriber of immediateSubscribers) {
-            const matchingArticles = newArticles.filter(article => 
-                subscriber.categories.includes(article.category)
-            );
-
-            // 3. If matching articles exist, send an email alert via Brevo
-            if (matchingArticles.length > 0) {
-                await sendNewsEmail(subscriber.email, matchingArticles);
-            }
-        }
-    } catch (error) {
-        console.error("❌ Error notifying immediate subscribers:", error.message);
-    }
-};
-
-
 
 // Skips articles with no title (NewsAPI occasionally returns "[Removed]"
 // placeholder entries) and skips anything already stored (matched by
 // title, same convention as createNews's own duplicate check).
+//
+// For every genuinely NEW article stored, also fires
+// sendCategoryNotifications so subscribers actually get notified about
+// articles pulled in via ingestion, not just ones created manually
+// through the admin/editor createNews endpoint.
 const storeArticles = async (articles, category) => {
   let created = 0;
   let skipped = 0;
@@ -130,7 +75,8 @@ const storeArticles = async (articles, category) => {
       continue;
     }
 
-    await New.create(mapArticle(article, category));
+    const saved = await New.create(mapArticle(article, category));
+    await sendCategoryNotifications(saved);
     created++;
   }
 
@@ -160,4 +106,4 @@ const ingestAllCategories = async (options = {}) => {
   return results;
 };
 
-module.exports = { ingestCategory, ingestAllCategories, CATEGORIES, saveArticlesToDb };
+module.exports = { ingestCategory, ingestAllCategories, CATEGORIES };

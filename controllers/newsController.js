@@ -128,20 +128,20 @@ const newsController = {
     }
   },
 
-  getNewsByCategory: async (request, response) => {
+ getNewsByCategory: async (request, response) => {
     try {
-    const { category } = request.params;
+      const { category } = request.params;
 
-    // $options: 'i' makes 'technology', 'Technology', and 'TECHNOLOGY' all match!
-    const news = await News.find({
-      category: { $regex: new RegExp(`^${category}$`, 'i') }
-    }).sort({ createdAt: -1 });
+      // $options: 'i' makes 'technology', 'Technology', and 'TECHNOLOGY' all match!
+      const news = await New.find({
+        category: { $regex: new RegExp(`^${category}$`, 'i') }
+      }).sort({ createdAt: -1 });
 
-    return response.status(200).json(news);
-  } catch (error) {
-    console.error("Error getting news by category:", error);
-    return response.status(500).json({ message: error.message });
-  }
+      return response.status(200).json(news);
+    } catch (error) {
+      console.error("Error getting news by category:", error);
+      return response.status(500).json({ message: error.message });
+    }
   },
   BreakingNews: async (request, response) => {
     try {

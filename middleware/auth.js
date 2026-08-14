@@ -23,7 +23,7 @@ const isAuthenticated = async (request, response, next) => {
         request.userId = userId;
 
         // call the next middleware or route handler
-        next();
+        return next();
     } catch (e) {
         return response.status(401).json({ message: "Unauthorized access" });
     }

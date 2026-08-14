@@ -130,22 +130,18 @@ const newsController = {
 
   getNewsByCategory: async (request, response) => {
     try {
-      const { category } = request.params;
-      const { page = 1, pageSize = 10 } = request.query;
+    const { category } = req.params;
 
-      const pageNum = Math.max(1, parseInt(page, 10) || 1);
-      const limit = Math.max(1, parseInt(pageSize, 10) || 10);
-      const skip = (pageNum - 1) * limit;
+    // $options: 'i' makes 'technology', 'Technology', and 'TECHNOLOGY' all match!
+    const news = await News.find({
+      category: { $regex: new RegExp(`^${category}$`, 'i') }
+    }).sort({ createdAt: -1 });
 
-      const [articles, totalResults] = await Promise.all([
-        New.find({ category }).sort({ createdAt: -1 }).skip(skip).limit(limit),
-        New.countDocuments({ category }),
-      ]);
-
-      return response.status(200).json({ articles, totalResults });
-    } catch (e) {
-      return response.status(500).json({ message: e.message });
-    }
+    return res.status(200).json(news);
+  } catch (error) {
+    console.error("Error getting news by category:", error);
+    return res.status(500).json({ message: error.message });
+  }
   },
   BreakingNews: async (request, response) => {
     try {

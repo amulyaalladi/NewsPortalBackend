@@ -2,17 +2,24 @@ const Notification = require('../models/notification');
 
 // GET /api/v1/notifications
 exports.getNotifications = async (req, res) => {
-  try {
-    const userId = req.userId || req.user?._id;
+ try {
+    // 1. Get user ID from req.user (set by auth middleware)
+    const userId = req.user?._id || req.user?.id || req.userId;
 
+    if (!userId) {
+      return res.status(401).json({ message: "Unauthorized access" });
+    }
+
+    // 2. Query using 'user' (matching your schema field!)
     const notifications = await Notification.find({ user: userId })
       .sort({ createdAt: -1 })
-      .limit(50); // Get top 50 recent notifications
+      .lean();
 
-    return res.status(200).json(notifications);
+    // 3. ALWAYS return a response
+    return res.status(200).json(notifications || []);
   } catch (error) {
-    console.error("Error fetching notifications:", error);
-    return res.status(500).json({ message: error.message });
+    console.error("Error in getNotifications:", error);
+    return res.status(500).json({ message: error.message || "Failed to fetch notifications" });
   }
 };
 

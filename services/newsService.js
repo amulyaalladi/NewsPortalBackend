@@ -1,5 +1,7 @@
 const New=require('../models/news');
-
+const NewsArticle=require('../models/newsArticle');
+const Subscription=require("../models/subscription");
+const Notification=require("../models/notification")
 const getApprovedNews=async()=>{
     return await New.find({
         status:"approved"

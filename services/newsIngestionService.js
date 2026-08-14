@@ -11,7 +11,7 @@ const axios = require('axios');
 const New = require('../models/news');
 require('dotenv').config();
 const {NEWS_API_KEY,NEWS_API_URL}=require('../utlis/config');
-const Subscriber = require('../models/subscriber');
+const Subscriber = require('../models/subscription');
 const { sendNewsEmail } = require('../utlis/mailer');
 
 

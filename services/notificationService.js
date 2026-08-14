@@ -1,43 +1,49 @@
+const axios = require('axios');
 const User = require('../models/user');
 const Notification = require('../models/notification');
 const { sendNewsEmail } = require('../utlis/mailer');
 
-const sendNewsNotification = async (news) => {
+const sendEmailNotification = async (recipientEmail, recipientName, subject, htmlContent) => {
   try {
-    const users = await User.find({ subscribedCategories: news.category });
-    if (!users.length) {
+    // 1. Ensure recipient email is a string, not an object
+    const emailStr = typeof recipientEmail === 'object' ? recipientEmail.email : recipientEmail;
+
+    if (!emailStr) {
+      console.error("Skipping email: No valid recipient email address provided.");
       return;
     }
 
-    const recipients = [];
-    const message = news.content || news.description || 'A new article has been published.';
+    // 2. Brevo API payload REQUIRES 'to' to be an array of objects
+    const payload = {
+      sender: {
+        name: "News Portal",
+        email: process.env.SENDER_EMAIL || "noreply@yourdomain.com"
+      },
+      to: [
+        {
+          email: emailStr,
+          name: recipientName || "Subscriber"
+        }
+      ],
+      subject: subject || "Latest News Update",
+      htmlContent: htmlContent || "<p>You have new news updates!</p>"
+    };
 
-    for (const user of users) {
-      await sendNewsEmail({
-        to: user.email,
-        subject: news.title,
-        text: `${news.title}\n\n${message}`,
-        html: `
-          <h2>${news.title}</h2>
-          <p>${message}</p>
-          <a href="${process.env.CLIENT_URL || 'http://localhost:5173'}/news/${news._id}">Read Full Article</a>
-        `,
-      });
-      recipients.push(user._id);
-    }
-
-    await Notification.create({
-      title: news.title,
-      message,
-      news: news._id,
-      category: news.category,
-      sentTo: recipients,
+    const response = await axios.post('https://api.brevo.com/v3/smtp/email', payload, {
+      headers: {
+        'api-key': process.env.BREVO_API_KEY,
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      },
+      timeout: 10000 // 10 second timeout
     });
 
-    console.log('Notification Sent');
-  } catch (e) {
-    console.log(e.message);
+    console.log(`Email successfully sent to ${emailStr}`);
+    return response.data;
+  } catch (error) {
+    console.error("Brevo API Error:", error.response?.data || error.message);
+    // Don't rethrow if you don't want it to crash the background job
   }
 };
 
-module.exports = sendNewsNotification;
+module.exports = { sendEmailNotification };

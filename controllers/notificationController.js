@@ -1,64 +1,80 @@
-const Notification = require('../models/notification');
+const mongoose = require('mongoose');
+const Notification = require('../models/Notification');
 
-// GET /api/v1/notifications
-exports.getNotifications = async (req, res) => {
- try {
-    // 1. Get user ID from req.user (set by auth middleware)
-    const userId = req.user?._id || req.user?.id || req.userId;
-
-    if (!userId) {
-      return res.status(401).json({ message: "Unauthorized access" });
+// GET /api/notifications
+const getNotifications = async (req, res) => {
+  try {
+    // 1. Guard check for authenticated user object
+    if (!req.user) {
+      return res.status(401).json({ error: 'Unauthorized: User context missing' });
     }
 
-    // 2. Query using 'user' (matching your schema field!)
-    const notifications = await Notification.find({ user: userId })
-      .sort({ createdAt: -1 })
-      .lean();
+    // 2. Extract user ID (supports Passport, JWT, or custom auth setups)
+    const rawUserId = req.user._id || req.user.id || req.user.userId;
 
-    // 3. ALWAYS return a response
-    return res.status(200).json(notifications || []);
+    if (!rawUserId) {
+      return res.status(400).json({ error: 'User identifier not found on request' });
+    }
+
+    // 3. Cast to Mongoose ObjectId
+    const userId = typeof rawUserId === 'string' 
+      ? new mongoose.Types.ObjectId(rawUserId) 
+      : rawUserId;
+
+    // 4. Fetch notifications & unread count
+    const [notifications, unreadCount] = await Promise.all([
+      Notification.find({ userId })
+        .sort({ createdAt: -1 })
+        .limit(50)
+        .lean(),
+      Notification.countDocuments({ userId, isRead: false })
+    ]);
+
+    return res.status(200).json({
+      unreadCount,
+      notifications
+    });
+
   } catch (error) {
-    console.error("Error in getNotifications:", error);
-    return res.status(500).json({ message: error.message || "Failed to fetch notifications" });
+    console.error('Error in getNotifications controller:', error);
+    return res.status(500).json({
+      error: 'Failed to fetch notifications',
+      details: error.message
+    });
   }
 };
 
-// PATCH /api/v1/notifications/:id/read
-exports.markAsRead = async (req, res) => {
+// PATCH /api/notifications/:id/read
+const markAsRead = async (req, res) => {
   try {
     const { id } = req.params;
-    const userId = req.userId || req.user?._id;
+    const rawUserId = req.user._id || req.user.id || req.user.userId;
 
-    const notification = await Notification.findOneAndUpdate(
-      { _id: id, user: userId },
-      { read: true },
-      { new: true }
-    );
-
-    if (!notification) {
-      return res.status(404).json({ message: "Notification not found" });
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ error: 'Invalid notification ID' });
     }
 
-    return res.status(200).json(notification);
+    const userId = typeof rawUserId === 'string' 
+      ? new mongoose.Types.ObjectId(rawUserId) 
+      : rawUserId;
+
+    const result = await Notification.updateOne(
+      { _id: id, userId },
+      { $set: { isRead: true } }
+    );
+
+    if (result.matchedCount === 0) {
+      return res.status(404).json({ error: 'Notification not found' });
+    }
+
+    return res.status(200).json({ success: true });
   } catch (error) {
-    console.error("Error marking notification read:", error);
-    return res.status(500).json({ message: error.message });
+    console.error('Error in markAsRead controller:', error);
+    return res.status(500).json({ error: 'Failed to update notification state' });
   }
 };
 
-// PATCH /api/v1/notifications/read-all
-exports.markAllAsRead = async (req, res) => {
-  try {
-    const userId = req.userId || req.user?._id;
-
-    await Notification.updateMany(
-      { user: userId, read: false },
-      { $set: { read: true } }
-    );
-
-    return res.status(200).json({ message: "All notifications marked as read" });
-  } catch (error) {
-    console.error("Error marking all read:", error);
-    return res.status(500).json({ message: error.message });
-  }
+module.exports = {
+  getNotifications,
+  markAsRead
 };

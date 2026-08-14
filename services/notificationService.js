@@ -1,6 +1,6 @@
 const User = require('../models/user');
 const Notification = require('../models/notification');
-const { sendSubscriptionEmail } = require('../utlis/mailer');
+const { sendNewsEmail } = require('../utlis/mailer');
 
 const sendNewsNotification = async (news) => {
   try {
@@ -13,7 +13,7 @@ const sendNewsNotification = async (news) => {
     const message = news.content || news.description || 'A new article has been published.';
 
     for (const user of users) {
-      await sendSubscriptionEmail({
+      await sendNewsEmail({
         to: user.email,
         subject: news.title,
         text: `${news.title}\n\n${message}`,

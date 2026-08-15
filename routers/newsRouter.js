@@ -9,7 +9,7 @@ const {
   getNewsByCategory, 
   BreakingNews, 
   TrendingNews, 
-  fetchExternalNews 
+  fetchExternalNews
 } = require('../controllers/newsController');
 
 const { isAuthenticated, allowRoles } = require('../middleware/auth');

@@ -5,8 +5,6 @@ const { SALT_ROUNDS } = require('../utlis/config');
 const { sendCategoryNotifications } = require('./notificationController');
 const { ingestCategory, ingestAllCategories } = require('../services/newsIngestionService');
 
-const CATEGORIES = ['General', 'Health', 'Science', 'Business', 'Technology', 'Sports', 'Entertainment'];
-
 const newsController = {
   createNews: async (request, response) => {
     try {
@@ -130,7 +128,7 @@ const newsController = {
     }
   },
 
- getNewsByCategory: async (request, response) => {
+  getNewsByCategory: async (request, response) => {
     try {
       const { category } = request.params;
 
@@ -162,51 +160,31 @@ const newsController = {
     }
   },
 
-  // Pulls fresh articles from NewsAPI and stores them in our DB.
+  // Pulls fresh articles from NewsAPI and stores them in our DB, via the
+  // working ingestCategory/ingestAllCategories functions in
+  // newsIngestionService.js (which already handle duplicate-skipping and
+  // firing sendCategoryNotifications for genuinely new articles).
+  //
   // POST /news/fetch-external                     -> ingests every category
   // POST /news/fetch-external?category=technology  -> ingests one category
-fetchExternalNews : async (req, res) => {
-  try {
-    let totalNewArticles = 0;
+  //
+  // NOTE: category must be lowercase (business, technology, sports,
+  // entertainment, health, science, general) — that's what NewsAPI's
+  // top-headlines endpoint expects.
+  fetchExternalNews: async (request, response) => {
+    try {
+      const { category } = request.query;
 
-    for (const category of CATEGORIES) {
-      // 1. Fetch external articles for category (implement your API call here)
-      const fetchedArticles = await fetchFromNewsApi(category); 
+      const result = category
+        ? await ingestCategory(category)
+        : await ingestAllCategories();
 
-      const newlyCreatedArticles = [];
-      for (const article of fetchedArticles) {
-        // Prevent duplicate entries
-        const exists = await Article.findOne({ url: article.url });
-        if (!exists) {
-          const saved = await Article.create({ ...article, category });
-          newlyCreatedArticles.push(saved);
-        }
-      }
-
-      totalNewArticles += newlyCreatedArticles.length;
-
-      // 2. Send email notifications if new articles were created
-      if (newlyCreatedArticles.length > 0) {
-        // Find users subscribed to this category (or all users)
-        const subscribers = await User.find({ subscribedCategories: category });
-
-        for (const user of subscribers) {
-          await sendNewsEmail(user.email, newlyCreatedArticles);
-        }
-      }
+      return response.status(200).json({ message: 'News ingestion complete', result });
+    } catch (e) {
+      console.error('Error in fetchExternalNews:', e.message);
+      return response.status(500).json({ message: e.message });
     }
-
-    const message = `Ingestion complete. Added ${totalNewArticles} new articles across all categories.`;
-    if (res) return res.status(200).json({ message, totalNewArticles });
-    console.log(`✅ ${message}`);
-
-  } catch (error) {
-    console.error('❌ Error fetching news across categories:', error.message);
-    if (res) return res.status(500).json({ message: error.message });
   }
-
- 
-}
 };
 
 module.exports = newsController;

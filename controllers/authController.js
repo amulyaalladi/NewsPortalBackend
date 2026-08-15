@@ -81,7 +81,7 @@ const authController={
                 
             }
         },
-        forgotPassword: async (request, response) => {
+    forgotPassword: async (request, response) => {
         try {
             const { email } = request.body;
             if (!email) {
@@ -89,34 +89,60 @@ const authController={
             }
 
             const user = await User.findOne({ email });
-            // For security, don't reveal if user exists or not
+            // Security best practice: respond with success even if user doesn't exist
             if (!user) {
-                return response.status(200).json({ message: "If that email is registered, a password reset link has been sent." });
+                return response.status(200).json({ 
+                    message: "If that email is registered, a password reset link has been sent." 
+                });
             }
 
-            // Generate a random token
+            // Generate reset token
             const resetToken = crypto.randomBytes(32).toString('hex');
-            
-            // Hash token before saving to database for security
             const hashedToken = crypto.createHash('sha256').update(resetToken).digest('hex');
 
             user.resetPasswordToken = hashedToken;
-            user.resetPasswordExpires = Date.now() + 3600000; // 1 hour expiration
+            user.resetPasswordExpires = Date.now() + 3600000; // 1 hour expiry
             await user.save();
 
-            // Construct Reset URL (Frontend URL)
+            // Frontend Reset Link URL
             const resetUrl = `http://localhost:5173/reset-password/${resetToken}`;
 
-            // TODO: Use nodemailer or your email provider (e.g., SendGrid) to send the email.
-            // For development, log the link to the server console:
-            console.log("Password Reset Link:", resetUrl);
+            const htmlMessage = `
+                <div style="font-family: sans-serif; padding: 20px;">
+                    <h2>Password Reset Request</h2>
+                    <p>You requested a password reset for your <strong>Daily Pulse</strong> account.</p>
+                    <p>Click the link below to set a new password:</p>
+                    <p>
+                        <a href="${resetUrl}" style="background-color: #0891b2; color: white; padding: 10px 20px; text-decoration: none; border-radius: 8px; display: inline-block;">
+                            Reset Password
+                        </a>
+                    </p>
+                    <p>This link expires in 1 hour.</p>
+                    <p>If you didn't request this, please ignore this email.</p>
+                </div>
+            `;
 
-            return response.status(200).json({ message: "If that email is registered, a password reset link has been sent." });
+            // Send via Brevo API
+            await sendEmail({
+                email: user.email,
+                subject: "Password Reset Link - Daily Pulse",
+                message: htmlMessage
+            });
+
+            return response.status(200).json({ 
+                message: "If that email is registered, a password reset link has been sent." 
+            });
+
         } catch (e) {
-            return response.status(500).json({ message: e.message });
+            // Clean up reset token fields if email sending fails
+            if (user) {
+                user.resetPasswordToken = undefined;
+                user.resetPasswordExpires = undefined;
+                await user.save();
+            }
+            return response.status(500).json({ message: e.message || "Email could not be sent." });
         }
     },
-
     // Reset Password - Save New Password
     resetPassword: async (request, response) => {
         try {

@@ -2,6 +2,7 @@ const User = require("../models/user");
 const bcrypt=require('bcrypt');
 const { SALT_ROUNDS, JWT_SECRET } = require("../utlis/config");
 const jwt=require('jsonwebtoken');
+const { sendForgotPasswordEmail } = require("../utlis/mailer");
 const crypto = require('crypto');
 
 require('dotenv').config()

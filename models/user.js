@@ -27,15 +27,17 @@ const userSchema=new mongoose.Schema({
       minlength: 6,
       
     },
-    resetPasswordToken: {
-    type: String,
-    default: null
-    },
-    resetPasswordExpires: {
-    type: Date,
-    default: null
+
+    bio: {
+      type: String,
+      default: "",
+      maxlength: 300,
     },
 
+    avatarUrl: {
+      type: String,
+      default: "",
+    },
 
     role: {
       type: String,
@@ -47,11 +49,6 @@ const userSchema=new mongoose.Schema({
       enum:["none","pending","approved","rejected"],
       default:"none"
     },
-    subscribedCategories:[{
-      type:[String],
-      ref:"Category"
-    },
-  ],
 
     isVerified: {
       type: Boolean,

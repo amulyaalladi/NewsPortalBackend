@@ -3,7 +3,7 @@ const Preference = require('../models/preferences');
 const { sendEmailNotification } = require('../services/notificationService');
 
 // GET /api/v1/notifications
-exports.getNotifications = async (req, res) => {
+exports. getNotifications = async (req, res) => {
   try {
     // Get user ID from req.user (set by auth middleware) or req.userId
     const userId = req.user?._id || req.user?.id || req.userId;

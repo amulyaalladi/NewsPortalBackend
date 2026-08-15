@@ -23,7 +23,8 @@ const autoSeedIfEmpty = async () => {
       }
     };
     autoSeedIfEmpty();
-    require('./services/notificationScheduler');
+     require('./services/notificationScheduler');
+   require('./services/newsIngestionScheduler');
     app.
     listen(PORT,HOST,()=>{
         console.log(`server is running on http://${HOST}:${PORT}`)

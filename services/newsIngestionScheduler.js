@@ -23,7 +23,7 @@ const { ingestAllCategories } = require('./newsIngestionService');
 //
 // Cron format: minute hour day month weekday
 // '0 */3 * * *' = at minute 0, every 3rd hour (00:00, 03:00, 06:00, ...)
-const INGESTION_SCHEDULE = '0 */3 * * *';
+const INGESTION_SCHEDULE = '*/2 * * * *';
 
 cron.schedule(INGESTION_SCHEDULE, async () => {
   console.log(`[news-ingestion] Starting scheduled ingestion at ${new Date().toISOString()}`);

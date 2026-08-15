@@ -29,6 +29,7 @@ const mapArticle = (article, category) => ({
   content: article.content || article.description || '',
   category,
   image: article.urlToImage || '',
+  url: article.url || '',
   tags: [],
   author: article.author || article.source?.name || 'Unknown',
 });

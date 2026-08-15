@@ -16,6 +16,13 @@ const newsSchema = new mongoose.Schema({
     image: {
         type: String
     },
+    // Link back to the original source article (only populated for
+    // NewsAPI-ingested articles — manually created ones via createNews
+    // typically won't have one, which is expected).
+    url: {
+        type: String,
+        default: ''
+    },
     tags: [
         {
             type: String

@@ -106,7 +106,8 @@ const sendForgotPasswordEmail = async (toEmail, resetUrl) => {
         'api-key': process.env.BREVO_API_KEY,
         'Content-Type': 'application/json',
         'Accept': 'application/json'
-      }
+      },
+      timeout:8000
     });
 
     console.log(`✅ Password reset email sent to ${toEmail} | Message ID: ${response.data.messageId}`);

@@ -82,67 +82,56 @@ const authController={
             }
         },
     forgotPassword: async (request, response) => {
-        try {
-            const { email } = request.body;
-            if (!email) {
-                return response.status(400).json({ message: "Email is required" });
-            }
+    let user = null;
+    try {
+      const { email } = request.body;
 
-            const user = await User.findOne({ email });
-            // Security best practice: respond with success even if user doesn't exist
-            if (!user) {
-                return response.status(200).json({ 
-                    message: "If that email is registered, a password reset link has been sent." 
-                });
-            }
+      if (!email) {
+        return response.status(400).json({ message: "Email is required" });
+      }
 
-            // Generate reset token
-            const resetToken = crypto.randomBytes(32).toString('hex');
-            const hashedToken = crypto.createHash('sha256').update(resetToken).digest('hex');
+      user = await User.findOne({ email });
 
-            user.resetPasswordToken = hashedToken;
-            user.resetPasswordExpires = Date.now() + 3600000; // 1 hour expiry
-            await user.save();
+      // Return success even if user not found (security best practice)
+      if (!user) {
+        return response.status(200).json({
+          message: "If that email is registered, a password reset link has been sent."
+        });
+      }
 
-            // Frontend Reset Link URL
-            const resetUrl = `http://localhost:5173/reset-password/${resetToken}`;
+      // Generate random token using Node's crypto
+      const resetToken = crypto.randomBytes(32).toString("hex");
+      const hashedToken = crypto.createHash("sha256").update(resetToken).digest("hex");
 
-            const htmlMessage = `
-                <div style="font-family: sans-serif; padding: 20px;">
-                    <h2>Password Reset Request</h2>
-                    <p>You requested a password reset for your <strong>Daily Pulse</strong> account.</p>
-                    <p>Click the link below to set a new password:</p>
-                    <p>
-                        <a href="${resetUrl}" style="background-color: #0891b2; color: white; padding: 10px 20px; text-decoration: none; border-radius: 8px; display: inline-block;">
-                            Reset Password
-                        </a>
-                    </p>
-                    <p>This link expires in 1 hour.</p>
-                    <p>If you didn't request this, please ignore this email.</p>
-                </div>
-            `;
+      user.resetPasswordToken = hashedToken;
+      user.resetPasswordExpires = Date.now() + 3600000; // 1 hour token validity
+      await user.save();
 
-            // Send via Brevo API
-            await sendEmail({
-                email: user.email,
-                subject: "Password Reset Link - Daily Pulse",
-                message: htmlMessage
-            });
+      // Build frontend URL
+      const resetUrl = `http://localhost:5173/reset-password/${resetToken}`;
 
-            return response.status(200).json({ 
-                message: "If that email is registered, a password reset link has been sent." 
-            });
+      // Send email
+      await sendForgotPasswordEmail(user.email, resetUrl);
 
-        } catch (e) {
-            // Clean up reset token fields if email sending fails
-            if (user) {
-                user.resetPasswordToken = undefined;
-                user.resetPasswordExpires = undefined;
-                await user.save();
-            }
-            return response.status(500).json({ message: e.message || "Email could not be sent." });
-        }
-    },
+      return response.status(200).json({
+        message: "If that email is registered, a password reset link has been sent."
+      });
+
+    } catch (e) {
+      console.error("Forgot Password Error:", e.message);
+
+      // Clean up user token if sending fails
+      if (user) {
+        user.resetPasswordToken = undefined;
+        user.resetPasswordExpires = undefined;
+        await user.save().catch(() => {}); // prevent secondary crash
+      }
+
+      return response.status(500).json({
+        message: e.message || "Failed to process request. Please try again later."
+      });
+    }
+  },
     // Reset Password - Save New Password
     resetPassword: async (request, response) => {
         try {

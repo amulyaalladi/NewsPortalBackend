@@ -173,8 +173,8 @@ const newsController = {
   // top-headlines endpoint expects.
   fetchExternalNews: async (request, response) => {
    try {
-    const categoriesToProcess = req.query.category 
-      ? [req.query.category] 
+    const categoriesToProcess = request.query.category 
+      ? [request.query.category] 
       : ['General', 'Health', 'Science', 'Business', 'Technology', 'Sports', 'Entertainment'];
 
     let totalNewArticles = 0;
@@ -217,7 +217,7 @@ const newsController = {
     }
 
     // 💡 Lightweight response: Return ONLY summary counts, NOT full article objects
-    return res.status(200).json({
+    return response.status(200).json({
       success: true,
       message: 'Ingestion completed successfully.',
       processedCategories: categoriesToProcess.length,
@@ -226,7 +226,7 @@ const newsController = {
 
   } catch (error) {
     console.error('❌ fetch-external error:', error.message);
-    return res.status(500).json({ 
+    return response.status(500).json({ 
       success: false, 
       message: error.message 
     });

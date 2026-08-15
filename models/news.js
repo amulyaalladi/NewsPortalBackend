@@ -1,40 +1,18 @@
+// models/news.js
 const mongoose = require('mongoose');
 
 const newsSchema = new mongoose.Schema({
-    title: {
-        type: String,
-        required: true,
-    },
-    content: {
-        type: String,
-        required: true,
-    },
-    category: {
-        type: String,      // ✅ Changed from ObjectId to String
-        required: true
-    },
-    image: {
-        type: String
-    },
-    // Link back to the original source article (only populated for
-    // NewsAPI-ingested articles — manually created ones via createNews
-    // typically won't have one, which is expected).
-    url: {
-        type: String,
-        default: ''
-    },
-    tags: [
-        {
-            type: String
-        },
-    ],
-    author: {
-        type: String       // ✅ Changed from ObjectId to String
-    },
-},
-    {
-        timestamps: true
+  title: { type: String, required: true },
+  url: { type: String, required: true, unique: true },
+  description: { type: String },
+  // Remove 'required: true' or provide a fallback default
+  content: { 
+    type: String, 
+    default: function() {
+      return this.description || 'No content available.';
     }
-);
+  },
+  category: { type: String, required: true }
+});
 
-module.exports = mongoose.model('New', newsSchema, 'news');
+module.exports = mongoose.model('News', newsSchema);

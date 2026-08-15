@@ -181,7 +181,7 @@ const newsController = {
 
     for (const category of categoriesToProcess) {
       // 1. Fetch external news articles
-      const fetchedArticles = await fetchFromNewsApi(category); 
+      const fetchedArticles = await fetchExternalNews(category); 
       if (!Array.isArray(fetchedArticles)) continue;
 
       const newArticles = [];

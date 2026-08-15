@@ -5,6 +5,8 @@ const { SALT_ROUNDS } = require('../utlis/config');
 const { sendCategoryNotifications } = require('./notificationController');
 const { ingestCategory, ingestAllCategories } = require('../services/newsIngestionService');
 
+const CATEGORIES = ['General', 'Health', 'Science', 'Business', 'Technology', 'Sports', 'Entertainment'];
+
 const newsController = {
   createNews: async (request, response) => {
     try {

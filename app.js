@@ -25,11 +25,15 @@ const allowedOrigins = [
   'https://realtimenews1.netlify.app'
 ];
 
+// Matches any deploy-preview/branch subdomain Netlify generates for this
+// site, e.g. https://6a81956c9581730008c1d78f--realtimenews1.netlify.app
+const netlifyPreviewPattern = /^https:\/\/[a-z0-9-]+--realtimenews1\.netlify\.app$/;
+
 app.use(cors({
   origin: function (origin, callback) {
     // allow requests with no origin (like Postman/curl)
     if (!origin) return callback(null, true);
-    if (allowedOrigins.includes(origin)) {
+    if (allowedOrigins.includes(origin) || netlifyPreviewPattern.test(origin)) {
       return callback(null, true);
     }
     return callback(new Error('Not allowed by CORS'));
@@ -46,5 +50,13 @@ app.use('/api/v1/notifications', notificationRouter);
 app.use('/api/v1/categories', categoryRouter);
 app.use('/api/v1/editors', editorRouter);
 
+// GET /health — deliberately does no DB work and needs no auth, so it's
+// as fast and lightweight as possible. Point a frequent (every 5-10 min)
+// cron-job.org job at this to keep the Render free-tier instance from
+// spinning down, so the heavier /news/fetch-external job always hits an
+// already-warm server instead of triggering a slow cold start.
+app.get('/health', (request, response) => {
+  response.status(200).json({ status: 'ok', uptime: process.uptime() });
+});
 
 module.exports = app;

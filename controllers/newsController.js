@@ -171,18 +171,35 @@ const newsController = {
   // NOTE: category must be lowercase (business, technology, sports,
   // entertainment, health, science, general) — that's what NewsAPI's
   // top-headlines endpoint expects.
+  //
+  // Responds IMMEDIATELY with a small 202, then keeps ingesting in the
+  // background. Ingesting all 7 categories (NewsAPI calls + DB writes +
+  // synchronous Brevo emails per new article) can take a while and the
+  // full results payload can get large — external cron services like
+  // cron-job.org reject slow/oversized responses on their free tier.
+  // Since nothing needs the ingestion result synchronously (it's a
+  // scheduled background job, not a user-facing request), there's no
+  // downside to firing-and-forgetting it. Check your server logs for the
+  // actual per-category outcome instead of the HTTP response.
   fetchExternalNews: async (request, response) => {
-    try {
-      const { category } = request.query;
+    const { category } = request.query;
 
+    // Respond right away — small, fast, well within any cron service's
+    // size/timeout limits.
+    response.status(202).json({
+      message: category
+        ? `Ingestion started for category: ${category}`
+        : 'Ingestion started for all categories',
+    });
+
+    // Continue the actual work after the response has already been sent.
+    try {
       const result = category
         ? await ingestCategory(category)
         : await ingestAllCategories();
-
-      return response.status(200).json({ message: 'News ingestion complete', result });
+      console.log('[fetch-external] Ingestion complete:', result);
     } catch (e) {
-      console.error('Error in fetchExternalNews:', e.message);
-      return response.status(500).json({ message: e.message });
+      console.error('[fetch-external] Ingestion failed:', e.message);
     }
   }
 };

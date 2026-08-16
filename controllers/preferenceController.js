@@ -24,9 +24,23 @@ updatePreferences :async (req, res) => {
   try {
     const userId = req.userId || req.user?._id;
 
+    // Only pull the fields we actually want a client to be able to set.
+    // Spreading req.body directly is dangerous here: getPreferences()
+    // returns the full Mongo document (_id, __v, createdAt, updatedAt),
+    // the frontend loads that straight into state, and re-sends the
+    // whole object on save — including _id, which Mongo treats as
+    // immutable and throws on. Whitelisting avoids that (and stops a
+    // client from ever overwriting `user` or other fields it shouldn't).
+    const { darkMode, preferredCategories, notificationChannel, notificationFrequency } = req.body;
+    const update = {};
+    if (darkMode !== undefined) update.darkMode = darkMode;
+    if (preferredCategories !== undefined) update.preferredCategories = preferredCategories;
+    if (notificationChannel !== undefined) update.notificationChannel = notificationChannel;
+    if (notificationFrequency !== undefined) update.notificationFrequency = notificationFrequency;
+
     const preferences = await Preference.findOneAndUpdate(
       { user: userId },
-      { ...req.body, user: userId },
+      { $set: update, $setOnInsert: { user: userId } },
       { new: true, upsert: true, runValidators: true }
     );
 

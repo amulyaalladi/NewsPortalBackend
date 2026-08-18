@@ -1,6 +1,6 @@
 const User = require("../models/user");
 const bcrypt=require('bcrypt');
-const { SALT_ROUNDS, JWT_SECRET } = require("../utlis/config");
+const { SALT_ROUNDS, JWT_SECRET, CLIENT_URL } = require("../utlis/config");
 const jwt=require('jsonwebtoken');
 const { sendForgotPasswordEmail } = require("../utlis/mailer");
 const crypto = require('crypto');
@@ -83,6 +83,7 @@ const authController={
             }
         },
         // Forgot Password - Send Reset Email
+// Forgot Password - Send Reset Email
 forgotPassword: async (request, response) => {
   let user = null;
   try {
@@ -109,8 +110,9 @@ forgotPassword: async (request, response) => {
     user.resetPasswordExpires = Date.now() + 3600000; // 1 hour token validity
     await user.save();
 
-    // Build frontend URL
-    const resetUrl = `${process.env.CLIENT_URL || "http://localhost:5173"}/reset-password/${resetToken}`;
+    // Build frontend URL with token
+    const baseUrl = CLIENT_URL || "http://localhost:5173";
+    const resetUrl = `${baseUrl.replace(/\/$/, "")}/reset-password/${resetToken}`;
 
     // Send email with reset credentials/link
     await sendForgotPasswordEmail(user.email, resetUrl, user.name);
@@ -135,7 +137,8 @@ forgotPassword: async (request, response) => {
 },
    
     // Reset Password - Save New Password
-  resetPassword: async (request, response) => {
+ // Reset Password - Save New Password
+resetPassword: async (request, response) => {
   try {
     const { token } = request.params;
     const { email, password } = request.body;
@@ -144,10 +147,11 @@ forgotPassword: async (request, response) => {
       return response.status(400).json({ message: "Email, token, and new password are required" });
     }
 
-    if (password.length < 8) {
-      return response.status(400).json({ message: "Password must be at least 8 characters" });
+    if (password.length < 6) {
+      return response.status(400).json({ message: "Password must be at least 6 characters" });
     }
 
+    // Hash the incoming token to match the stored hash in MongoDB
     const hashedToken = crypto.createHash("sha256").update(token).digest("hex");
 
     const user = await User.findOne({
@@ -160,9 +164,11 @@ forgotPassword: async (request, response) => {
       return response.status(400).json({ message: "Invalid or expired reset link" });
     }
 
+    // Hash the new password using bcrypt
     const salt = await bcrypt.genSalt(10);
     user.password = await bcrypt.hash(password, salt);
 
+    // Clear reset token and expiration fields
     user.resetPasswordToken = undefined;
     user.resetPasswordExpires = undefined;
 

@@ -9,7 +9,8 @@ const JWT_SECRET=process.env.JWT_SECRET;
 const SMTP_USER=process.env.SMTP_USER;
 const SMTP_PASS=process.env.SMTP_PASS;
 const NEWS_API_KEY=process.env.NEWS_API_KEY;
-const NEWS_API_URL=process.env.NEWS_API_URL                                                                           
+const NEWS_API_URL=process.env.NEWS_API_URL;
+const CLIENT_URL=process.env.CLIENT_URL;                                                                        
 module.exports={
     MONGODB_URI,
     ENV,
@@ -20,5 +21,6 @@ module.exports={
     SMTP_USER,
     SMTP_PASS,
     NEWS_API_KEY,
-    NEWS_API_URL
+    NEWS_API_URL,
+    CLIENT_URL
 }

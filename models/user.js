@@ -1,4 +1,5 @@
-const mongoose=require('mongoose')
+const mongoose=require('mongoose');
+const { date } = require('zod');
 
 const userSchema=new mongoose.Schema({
     name: {
@@ -48,6 +49,14 @@ const userSchema=new mongoose.Schema({
       type:String,
       enum:["none","pending","approved","rejected"],
       default:"none"
+    },
+    resetPasswordToken:{
+       type:String,
+       default:undefined,
+    },
+    resetPasswordExpires:{
+      type:Date,
+      default:undefined,
     },
 
     isVerified: {

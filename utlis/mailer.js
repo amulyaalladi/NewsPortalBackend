@@ -1,5 +1,17 @@
 const axios = require('axios');
 const BREVO_API_URL = 'https://api.brevo.com/v3/smtp/email';
+const nodemailer = require("nodemailer");
+
+// 1. Define the transporter using your SMTP configuration
+const transporter = nodemailer.createTransport({
+  host: process.env.SMTP_HOST || "smtp.gmail.com",
+  port: parseInt(process.env.SMTP_PORT || "587"),
+  secure: process.env.SMTP_SECURE === "true", // true for 465, false for other ports
+  auth: {
+    user: process.env.SMTP_USER, // Your email
+    pass: process.env.SMTP_PASS, // Your app password or SMTP password
+  },
+});
 
 /**
  * Sends transactional news emails via Brevo v3 HTTP API

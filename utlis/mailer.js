@@ -1,5 +1,4 @@
 const axios = require('axios');
-
 const BREVO_API_URL = 'https://api.brevo.com/v3/smtp/email';
 
 /**
@@ -68,54 +67,38 @@ const sendNewsEmail = async (toEmail, articles) => {
   
 };
 
-const sendForgotPasswordEmail = async (toEmail, resetUrl) => {
-  try {
-    const payload = {
-      sender: {
-        name: process.env.SENDER_NAME || 'Daily Pulse',
-        email: process.env.SENDER_EMAIL
-      },
-      to: [{ email: toEmail }],
-      subject: '🔒 Reset Your Password - Daily Pulse',
-      htmlContent: `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; color: #1e293b; padding: 20px; border: 1px solid #e2e8f0; border-radius: 8px;">
-          <h2 style="color: #0f172a; border-bottom: 2px solid #0f172a; padding-bottom: 8px;">Daily Pulse</h2>
-          <h3>Password Reset Request</h3>
-          <p>We received a request to reset your password. Click the button below to set a new password for your account:</p>
-          
-          <div style="margin: 24px 0; text-align: center;">
-            <a href="${resetUrl}" style="background-color: #000000; color: #ffffff; text-decoration: none; padding: 12px 24px; font-weight: bold; border-radius: 4px; display: inline-block;">
-              Reset Password
-            </a>
-          </div>
-
-          <p style="font-size: 13px; color: #64748b;">
-            If the button doesn't work, copy and paste this link into your browser:<br />
-            <a href="${resetUrl}" style="color: #0284c7;">${resetUrl}</a>
-          </p>
-          
-          <p style="font-size: 12px; color: #94a3b8; margin-top: 24px;">
-            This link is valid for 1 hour. If you did not request a password reset, you can safely ignore this email.
-          </p>
-        </div>
-      `
-    };
-
-    const response = await axios.post(BREVO_API_URL, payload, {
-      headers: {
-        'api-key': process.env.BREVO_API_KEY,
-        'Content-Type': 'application/json',
-        'Accept': 'application/json'
-      },
-      timeout:8000
-    });
-
-    console.log(`✅ Password reset email sent to ${toEmail} | Message ID: ${response.data.messageId}`);
-    return response.data;
-  } catch (error) {
-    console.error(`❌ Brevo API Error (Reset Password) for ${toEmail}:`, error.response?.data || error.message);
-    throw error;
-  }
+const sendForgotPasswordEmail = async (toEmail, resetUrl, name = "") => {
+  const html = `
+  <div style="font-family: Arial, sans-serif; max-width: 480px; margin: 0 auto; padding: 24px; border: 1px solid #e5e7eb; border-radius: 12px;">
+    <h2 style="color: #111827;">Reset your password</h2>
+    <p style="color: #374151; font-size: 14px;">
+      Hi${name ? " " + name : ""}, we received a request to reset your password.
+      Click the button below to choose a new one. This link will expire in 1 hour.
+    </p>
+    <div style="text-align: center; margin: 32px 0;">
+      <a href="${resetUrl}"
+         style="background-color: #4f46e5; color: #ffffff; text-decoration: none;
+                padding: 12px 24px; border-radius: 8px; font-size: 14px; font-weight: 600;
+                display: inline-block;">
+        Reset Password
+      </a>
+    </div>
+    <p style="color: #6b7280; font-size: 12px;">
+      If the button doesn't work, copy and paste this link into your browser:<br />
+      <a href="${resetUrl}" style="color: #4f46e5;">${resetUrl}</a>
+    </p>
+    <p style="color: #6b7280; font-size: 12px;">
+      If you didn't request this, you can safely ignore this email — your password will remain unchanged.
+    </p>
+  </div>
+  `;
+ 
+  await transporter.sendMail({
+    from: `"Support" <${SMTP_USER}>`,
+    to: toEmail,
+    subject: "Reset your password",
+    html,
+  });
 };
 
 module.exports = {

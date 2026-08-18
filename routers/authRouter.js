@@ -1,5 +1,5 @@
 const express = require('express');
-const { register, login, logout,me, updateProfile, forgotPassword } = require('../controllers/authController');
+const { register, login, logout,me, updateProfile,forgotPassword, resetPassword } = require('../controllers/authController');
 const { isAuthenticated } = require('../middleware/auth');
 const newsRouter = require('./newsRouter');
 
@@ -13,7 +13,8 @@ authRouter.post('/login', login);
 authRouter.get('/news',isAuthenticated)
 authRouter.get('/me', isAuthenticated, me);
 authRouter.put('/profile',isAuthenticated,updateProfile);
-authRouter.post('/forgot-password',forgotPassword)
+authRouter.post("/forgot-password", forgotPassword);
+authRouter.post("/reset-password/:token", resetPassword);
 authRouter.post('/logout', isAuthenticated, logout);
 
 module.exports = authRouter;

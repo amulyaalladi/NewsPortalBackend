@@ -1,18 +1,44 @@
-// models/news.js
-const mongoose = require('mongoose');
+const mongoose = require("mongoose");
 
-const newsSchema = new mongoose.Schema({
-  title: { type: String, required: true },
-  url: { type: String, required: true, unique: true },
-  description: { type: String },
-  // Remove 'required: true' or provide a fallback default
-  content: { 
-    type: String, 
-    default: function() {
-      return this.description || 'No content available.';
-    }
+const newsSchema = new mongoose.Schema(
+  {
+    title: {
+      type: String,
+      required: true,
+    },
+
+    url: {
+      type: String,
+      required: true,
+      unique: true,
+    },
+
+    description: {
+      type: String,
+    },
+
+    content: {
+      type: String,
+      default: function () {
+        return this.description || "No content available.";
+      },
+    },
+
+    category: {
+      type: String,
+      required: true,
+    },
+
+    // Used by Admin Dashboard
+    status: {
+      type: String,
+      enum: ["published"],
+      default: "published",
+    },
   },
-  category: { type: String, required: true }
-});
+  {
+    timestamps: true,
+  }
+);
 
-module.exports = mongoose.model('News', newsSchema);
+module.exports = mongoose.model("News", newsSchema);

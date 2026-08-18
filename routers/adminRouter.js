@@ -1,19 +1,37 @@
-const express=require("express");
-const { getAllUsers, ApproveEditor, RejectEditor, ApproveNews, RejectNews, DeleteUser, DeleteNews } = require("../controllers/admiController");
-const adminRouter=express.Router();
-const {isAuthenticated , allowRoles}=require('../middleware/auth')
+const express = require("express");
 
+const { isAuthenticated, allowRoles } = require("../middleware/auth");
+const { getDashboardStats, getAllUsers, getUserById, blockUser, unblockUser,
+    deleteUser, getUserRegistrationStats,getCategoryStats, getNewsStats
+} = require("../controllers/adminController");
+
+
+const adminRouter = express.Router();
 
 adminRouter.use(isAuthenticated);
 adminRouter.use(allowRoles(['admin']));
 
-adminRouter.get('/users',getAllUsers);
-adminRouter.put('/editor/:id/approve',ApproveEditor);
-adminRouter.put('/editor/:id/reject',RejectEditor);
-adminRouter.put('/news/:id/approve',ApproveNews);
-adminRouter.put('/news/:id/reject',RejectNews);
-adminRouter.delete('/user/:id',DeleteUser);
-adminRouter.delete('/news/:id',DeleteNews)
 
 
-module.exports=adminRouter;
+// Dashboard
+adminRouter.get("/dashboard",getDashboardStats);
+
+
+
+// Users
+adminRouter.get("/users",getAllUsers);
+adminRouter.get("/users/:id",getUserById);
+adminRouter.patch("/users/:id/block",blockUser)
+adminRouter.patch("/users/:id/unblock",unblockUser);
+adminRouter.delete("/users/:id",deleteUser);
+
+
+
+// Analytics
+
+adminRouter.get("/analytics/users",getUserRegistrationStats);
+adminRouter.get("/analytics/categories",getCategoryStats);
+adminRouter.get("/analytics/news",getNewsStats);
+
+
+module.exports = adminRouter;

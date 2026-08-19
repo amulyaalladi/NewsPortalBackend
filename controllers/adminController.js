@@ -30,15 +30,22 @@ const adminController={
     });
 
     // Users registered this month
-    const startOfMonth = new Date(
-      new Date().getFullYear(),
-      new Date().getMonth(),
-      1
-    );
+   // Users registered this month
+const startOfMonth = new Date(
+  new Date().getFullYear(),
+  new Date().getMonth(),
+  1
+);
+
+const newUsersThisMonth = await User.countDocuments({
+  createdAt: { $gte: startOfMonth },
+});
+
+const totalNews = await News.countDocuments();
 
     
 
-    const totalNews = await News.countDocuments();
+   // const totalNews = await News.countDocuments();
 
     const publishedNews = await News.countDocuments({
       status: "published",

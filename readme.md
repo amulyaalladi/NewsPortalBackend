@@ -1,7 +1,8 @@
 # NewsPortal — Backend
 
 REST API for a news portal where users can browse trending news by category, subscribe to categories, and receive notifications. Includes role-based access for regular users, editors (who manage news content), and admins (who manage users, categories, and view analytics).
-
+//UPDATE
+- -**IMPORTANT** : PLEASE WAIT FOR 2 -3HRS AFTER REGISTERING/UPDATING PREFERENCES FOR NEWS TO FETCH FROM API 
 Built with Node.js, Express, and MongoDB (Mongoose).
 
 demo credentials:

@@ -83,7 +83,6 @@ const authController={
             }
         },
         // Forgot Password - Send Reset Email
-// Forgot Password - Send Reset Email
 forgotPassword: async (request, response) => {
   let user = null;
   try {
@@ -137,7 +136,6 @@ forgotPassword: async (request, response) => {
 },
    
     // Reset Password - Save New Password
- // Reset Password - Save New Password
 resetPassword: async (request, response) => {
   try {
     const { token } = request.params;
@@ -183,7 +181,6 @@ resetPassword: async (request, response) => {
     });
   }
 },
-        //get news /home
         //get profile for loggedin user
        me: async (request, response) => {
         try {

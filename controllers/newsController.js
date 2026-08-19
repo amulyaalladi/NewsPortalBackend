@@ -4,8 +4,11 @@ const bcrypt = require('bcrypt');
 const { SALT_ROUNDS } = require('../utlis/config');
 const { sendCategoryNotifications } = require('./notificationController');
 const { ingestCategory, ingestAllCategories } = require('../services/newsIngestionService');
+const { getTopHeadlines } = require('../services/newsApiClient');
 
 const newsController = {
+  // ---- Admin/editor authored articles — still MongoDB-backed ----
+
   createNews: async (request, response) => {
     try {
       const { title, content, category, image, tags, author } = request.body;
@@ -94,36 +97,27 @@ const newsController = {
     }
   },
 
+  // ---- User-facing reads — now fetched LIVE from NewsAPI, not MongoDB ----
+  // These power the Home feed / user dashboard. Nothing here reads or
+  // writes the News collection anymore; every request goes out to
+  // NewsAPI in real time via newsApiClient.js.
+
   searchNews: async (request, response) => {
     try {
       const { q, category, page = 1, pageSize = 12 } = request.query;
-      const filter = {};
 
-      if (q) {
-        filter.$or = [
-          { title: { $regex: q, $options: 'i' } },
-          { content: { $regex: q, $options: 'i' } },
-        ];
-      }
-      if (category) {
-        filter.category = category;
-      }
+      const { articles, totalResults } = await getTopHeadlines({
+        q,
+        category,
+        page: Math.max(1, parseInt(page, 10) || 1),
+        pageSize: Math.max(1, parseInt(pageSize, 10) || 12),
+      });
 
-      const pageNum = Math.max(1, parseInt(page, 10) || 1);
-      const limit = Math.max(1, parseInt(pageSize, 10) || 12);
-      const skip = (pageNum - 1) * limit;
-
-      const [articles, totalResults] = await Promise.all([
-        New.find(filter).sort({ createdAt: -1 }).skip(skip).limit(limit),
-        New.countDocuments(filter),
-      ]);
-
-      // NOTE: shape is { articles, totalResults } at the top level to match
-      // Home.jsx's `const { articles, totalResults } = await searchNews(...)`.
-      // Adjust here (or in newsServices.js) if your frontend unwraps a
-      // differently-shaped response.
+      // Shape kept as { articles, totalResults } to match Home.jsx's
+      // `const { articles, totalResults } = await searchNews(...)`.
       return response.status(200).json({ articles, totalResults });
     } catch (e) {
+      console.error('Live search error:', e.message);
       return response.status(500).json({ message: e.message });
     }
   },
@@ -131,68 +125,63 @@ const newsController = {
   getNewsByCategory: async (request, response) => {
     try {
       const { category } = request.params;
+      const { pageSize = 20, page = 1 } = request.query;
 
-      // $options: 'i' makes 'technology', 'Technology', and 'TECHNOLOGY' all match!
-      const news = await New.find({
-        category: { $regex: new RegExp(`^${category}$`, 'i') }
-      }).sort({ createdAt: -1 });
+      const { articles } = await getTopHeadlines({
+        category,
+        page: Math.max(1, parseInt(page, 10) || 1),
+        pageSize: Math.max(1, parseInt(pageSize, 10) || 20),
+      });
 
-      return response.status(200).json(news);
+      // Kept as a plain array — newsServices.js's fetchTopHeadlines()
+      // expects `Array.isArray(response.data)`.
+      return response.status(200).json(articles);
     } catch (error) {
-      console.error("Error getting news by category:", error);
+      console.error('Error getting news by category:', error.message);
       return response.status(500).json({ message: error.message });
     }
   },
+
   BreakingNews: async (request, response) => {
     try {
-      const news = await New.find().sort({ createdAt: -1 }).limit(5);
-      return response.status(200).json({ message: 'Breaking News retrieved!', result: news });
-    } catch (e) {
-      return response.status(500).json({ message: e.message });
-    }
-  },
-  TrendingNews: async (request, response) => {
-    try {
-      const news = await New.find().sort({ createdAt: -1 }).limit(5);
-      return response.status(200).json({ message: 'Trending News retrieved!', result: news });
+      // NewsAPI has no distinct "breaking" endpoint — approximated as
+      // the latest top-headlines in the general category.
+      const { articles } = await getTopHeadlines({
+        category: 'general',
+        pageSize: 5,
+      });
+      return response.status(200).json({ message: 'Breaking News retrieved!', result: articles });
     } catch (e) {
       return response.status(500).json({ message: e.message });
     }
   },
 
-  // Pulls fresh articles from NewsAPI and stores them in our DB, via the
-  // working ingestCategory/ingestAllCategories functions in
-  // newsIngestionService.js (which already handle duplicate-skipping and
-  // firing sendCategoryNotifications for genuinely new articles).
-  //
-  // POST /news/fetch-external                     -> ingests every category
-  // POST /news/fetch-external?category=technology  -> ingests one category
-  //
-  // NOTE: category must be lowercase (business, technology, sports,
-  // entertainment, health, science, general) — that's what NewsAPI's
-  // top-headlines endpoint expects.
-  //
-  // Responds IMMEDIATELY with a small 202, then keeps ingesting in the
-  // background. Ingesting all 7 categories (NewsAPI calls + DB writes +
-  // synchronous Brevo emails per new article) can take a while and the
-  // full results payload can get large — external cron services like
-  // cron-job.org reject slow/oversized responses on their free tier.
-  // Since nothing needs the ingestion result synchronously (it's a
-  // scheduled background job, not a user-facing request), there's no
-  // downside to firing-and-forgetting it. Check your server logs for the
-  // actual per-category outcome instead of the HTTP response.
+  TrendingNews: async (request, response) => {
+    try {
+      // NewsAPI has no distinct "trending" endpoint — approximated as
+      // the latest top-headlines in the general category.
+      const { articles } = await getTopHeadlines({
+        category: 'general',
+        pageSize: 5,
+      });
+      return response.status(200).json({ message: 'Trending News retrieved!', result: articles });
+    } catch (e) {
+      return response.status(500).json({ message: e.message });
+    }
+  },
+
+  // Manual ingestion trigger — kept as-is. Still useful if you want a
+  // MongoDB record of articles for admin/notification purposes, even
+  // though the main user-facing reads above no longer depend on it.
   fetchExternalNews: async (request, response) => {
     const { category } = request.query;
 
-    // Respond right away — small, fast, well within any cron service's
-    // size/timeout limits.
     response.status(202).json({
       message: category
         ? `Ingestion started for category: ${category}`
         : 'Ingestion started for all categories',
     });
 
-    // Continue the actual work after the response has already been sent.
     try {
       const result = category
         ? await ingestCategory(category)

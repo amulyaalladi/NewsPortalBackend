@@ -48,7 +48,7 @@ password:"123456"
    SMTP_PASS=your_smtp_password
 
    NEWS_API_KEY=your_news_api_key
-   NEWS_API_URL=https://newsapi.org/v2
+   NEWS_API_URL=https://newsdata.io/api/1
 
    CLIENT_URL=http://localhost:5173
    ```

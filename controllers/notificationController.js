@@ -97,7 +97,7 @@ exports.sendCategoryNotifications = async (news) => {
         title,
         message,
         category: news.category,
-        articleUrl: news.image || news.url || '',
+        articleUrl: news.url || '',
         emailSent: false,
       }))
     );

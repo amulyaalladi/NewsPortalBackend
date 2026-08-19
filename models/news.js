@@ -28,6 +28,10 @@ const newsSchema = new mongoose.Schema(
       type: String,
       required: true,
     },
+     image: {
+      type: String,
+      default: "",
+    },
 
     // Used by Admin Dashboard
     status: {

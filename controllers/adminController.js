@@ -472,6 +472,123 @@ NEWS STATISTICS
     });
   }
 },
+getUserRegistrationStats : async (req, res) => {
+  try {
+    const registrations = await User.aggregate([
+      {
+        $match: {
+          role: "user",
+        },
+      },
+
+      {
+        $group: {
+          _id: {
+            year: { $year: "$createdAt" },
+            month: { $month: "$createdAt" },
+            day: { $dayOfMonth: "$createdAt" },
+          },
+          count: {
+            $sum: 1,
+          },
+        },
+      },
+
+      {
+        $sort: {
+          "_id.year": 1,
+          "_id.month": 1,
+          "_id.day": 1,
+        },
+      },
+    ]);
+
+    const data = registrations.map((item) => ({
+      date: `${item._id.year}-${String(item._id.month).padStart(
+        2,
+        "0"
+      )}-${String(item._id.day).padStart(2, "0")}`,
+      count: item.count,
+    }));
+
+    res.status(200).json({
+      success: true,
+      data,
+    });
+  } catch (error) {
+    console.error("User registration stats error:", error);
+
+    res.status(500).json({
+      success: false,
+      message: "Failed to fetch user registration statistics",
+      error: error.message,
+    });
+  }
+},
+getCategoryStats : async (req, res) => {
+  try {
+    const categoryStats = await Preference.aggregate([
+      {
+        $unwind: "$preferredCategories",
+      },
+
+      {
+        $group: {
+          _id: "$preferredCategories",
+          count: {
+            $sum: 1,
+          },
+        },
+      },
+
+      {
+        $sort: {
+          count: -1,
+        },
+      },
+    ]);
+
+    const data = categoryStats.map((item) => ({
+      category: item._id,
+      count: item.count,
+    }));
+
+    res.status(200).json({
+      success: true,
+      data,
+    });
+  } catch (error) {
+    console.error("Category stats error:", error);
+
+    res.status(500).json({
+      success: false,
+      message: "Failed to fetch category statistics",
+      error: error.message,
+    });
+  }
+  getNewsStats : async (req, res) => {
+  try {
+    const publishedNews = await News.countDocuments({
+      status: "published",
+    });
+
+    res.status(200).json({
+      success: true,
+      data: {
+        published: publishedNews,
+      },
+    });
+  } catch (error) {
+    console.error("News stats error:", error);
+
+    res.status(500).json({
+      success: false,
+      message: "Failed to fetch news statistics",
+      error: error.message,
+    });
+  }
+};
+},
 }
 
 

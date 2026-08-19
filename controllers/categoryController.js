@@ -1,3 +1,5 @@
+const Category = require("../models/Category");
+
 const categoryController = {
     AddCategory:async(request,response)=>{
         try{

@@ -1,52 +1,60 @@
-// Live reads from NewsAPI.org, called on-demand by newsController.js
+// Live reads from newsdata.io, called on-demand by newsController.js
 // (e.g. every time a user hits /news/search, /news/category/:category,
-// /news/breaking, /news/trending). Nothing here touches MongoDB — this
-// is intentionally separate from newsIngestionService.js, which still
-// writes to the DB (kept around for admin/editor-authored articles and
-// for triggering category-subscriber notifications on new external
-// articles, if you keep that running on a schedule).
+// /news/breaking, /news/trending). Nothing here touches MongoDB.
 //
-// Requires NEWS_API_KEY in the backend's .env file.
+// Requires NEWS_API_KEY (a newsdata.io key, format "pub_...") and
+// NEWS_API_URL=https://newsdata.io/api/1 in the backend's .env file.
 //
-// IMPORTANT: this must stay server-side. NewsAPI's free tier only allows
-// requests from localhost — calling it directly from the browser breaks
-// in production (CORS) and would expose the API key client-side. The
-// frontend must always go through our own backend routes, never NewsAPI
-// directly.
+// IMPORTANT: this must stay server-side. Calling any third-party news
+// API directly from the browser exposes the API key client-side and can
+// break in production due to CORS — the frontend must always go through
+// our own backend routes, never newsdata.io directly.
+//
+// Docs: https://newsdata.io/documentation
 
 const axios = require('axios');
 require('dotenv').config();
 const { NEWS_API_KEY, NEWS_API_URL } = require('../utlis/config');
 
-// NewsAPI's top-headlines only supports these 7 fixed categories.
-// Custom categories created via Admin > Categories won't map to
-// anything here — that's a live-API limitation, not a bug.
-const VALID_CATEGORIES = [
-  'business',
-  'technology',
-  'sports',
-  'entertainment',
-  'health',
-  'science',
-  'general',
-];
+// newsdata.io's supported categories. We don't have a "general" —
+// "top" is the closest equivalent (used whenever our own category
+// param is "general" or omitted). Custom categories created via
+// Admin > Categories won't map to anything here — that's a live-API
+// limitation, not a bug.
+const CATEGORY_MAP = {
+  general: 'top',
+  business: 'business',
+  technology: 'technology',
+  sports: 'sports',
+  entertainment: 'entertainment',
+  health: 'health',
+  science: 'science',
+};
 
-const mapArticle = (article, category) => ({
+const mapArticle = (article, requestedCategory) => ({
   title: article.title,
   description: article.description || '',
-  content: article.content || article.description || '',
-  category: category || null,
-  image: article.urlToImage || '',
-  url: article.url || '',
-  author: article.author || article.source?.name || 'Unknown',
-  source: article.source?.name || 'Unknown',
-  publishedAt: article.publishedAt || null,
+  content: article.description || '',
+  category: requestedCategory || (article.category && article.category[0]) || null,
+  image: article.image_url || '',
+  url: article.link || '',
+  author: (article.creator && article.creator[0]) || article.source_name || 'Unknown',
+  source: article.source_name || 'Unknown',
+  publishedAt: article.pubDate || null,
 });
 
 const getTopHeadlines = async ({
   category,
   q,
   country = 'us',
+  language = 'en',
+  // NOTE: newsdata.io's free tier paginates via a "nextPage" cursor
+  // token returned in the response, NOT numeric page jumping like
+  // NewsAPI. We accept `page` for API-shape compatibility with the
+  // rest of the app, but only page 1 (the initial request) actually
+  // works correctly right now — anything else just re-fetches page 1.
+  // Wire up real cursor-based pagination later if you need page > 1
+  // to work (store & pass back `nextPage` from the previous response).
   page = 1,
   pageSize = 20,
 } = {}) => {
@@ -54,34 +62,40 @@ const getTopHeadlines = async ({
     throw new Error('NEWS_API_KEY is not set in the backend .env file');
   }
 
-  if (category && !VALID_CATEGORIES.includes(category.toLowerCase())) {
-    // Not a NewsAPI-supported category (likely a custom admin-created
-    // one) — return an empty result instead of letting NewsAPI 400.
+  if (category && !CATEGORY_MAP[category.toLowerCase()]) {
+    // Not a supported category (likely a custom admin-created one) —
+    // return an empty result instead of letting newsdata.io error.
     return { articles: [], totalResults: 0 };
   }
 
   const params = {
-    apiKey: NEWS_API_KEY.trim(),
+    apikey: NEWS_API_KEY.trim(),
     country,
-    page,
-    pageSize,
+    language,
   };
-  if (category) params.category = category.toLowerCase();
+  if (category) params.category = CATEGORY_MAP[category.toLowerCase()];
   if (q) params.q = q;
-console.log(`[LIVE FETCH] Calling NewsAPI for category=${category || 'none'} q=${q || 'none'}`);
-  const response = await axios.get(`${NEWS_API_URL}/top-headlines`, {
-    params,
-    headers: { 'User-Agent': 'NewsPortal/1.0' },
-  });
 
-  const articles = (response.data.articles || [])
-    .filter((a) => a.title && a.title !== '[Removed]')
+  const response = await axios.get(`${NEWS_API_URL}/latest`, { params });
+
+  if (response.data.status !== 'success') {
+    throw new Error(response.data.message || 'newsdata.io request failed');
+  }
+
+  const allArticles = (response.data.results || [])
+    .filter((a) => a.title)
     .map((a) => mapArticle(a, category));
+
+  // newsdata.io's free tier returns up to 10 articles per call and
+  // doesn't support a pageSize param — trim client-side so callers
+  // asking for a smaller pageSize still get what they expect.
+  const articles = allArticles.slice(0, pageSize);
 
   return {
     articles,
-    totalResults: response.data.totalResults || articles.length,
+    totalResults: response.data.totalResults ?? articles.length,
+    nextPage: response.data.nextPage || null,
   };
 };
 
-module.exports = { getTopHeadlines, VALID_CATEGORIES };
+module.exports = { getTopHeadlines, CATEGORY_MAP };

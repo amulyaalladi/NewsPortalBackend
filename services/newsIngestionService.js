@@ -1,60 +1,58 @@
-// Pulls articles from NewsAPI.org and stores them in our own MongoDB
-// `News` collection, so the frontend can keep hitting our backend
-// (newsController.js) instead of calling NewsAPI directly from the
-// browser (which breaks in production due to NewsAPI's free-tier
-// localhost-only CORS restriction, and exposes the API key client-side).
-//
-// Requires NEWS_API_KEY in the backend's .env file — get one free at
-// https://newsapi.org/register. This key stays server-side only.
 
 const axios = require('axios');
 const New = require('../models/news');
 require('dotenv').config();
 const { NEWS_API_KEY, NEWS_API_URL } = require('../utlis/config');
 const { sendCategoryNotifications } = require('../controllers/notificationController');
+const { CATEGORY_MAP } = require('./newsApiClient');
 
-// NewsAPI's top-headlines categories.
-const CATEGORIES = [
-  'business',
-  'technology',
-  'sports',
-  'entertainment',
-  'health',
-  'science',
-  'general',
-];
+// Our own category keys. Mapped to newsdata.io's category names via
+// CATEGORY_MAP (imported from newsApiClient.js) — "general" -> "top".
+const CATEGORIES = Object.keys(CATEGORY_MAP);
 
 const mapArticle = (article, category) => ({
   title: article.title,
-  content: article.content || article.description || '',
+  content: article.description || '',
   category,
-  image: article.urlToImage || '',
-  url: article.url || '',
+  image: article.image_url || '',
+  url: article.link || '',
   tags: [],
-  author: article.author || article.source?.name || 'Unknown',
+  author: (article.creator && article.creator[0]) || article.source_name || 'Unknown',
 });
 
-const fetchCategoryFromNewsAPI = async (category, country = 'us', pageSize = 20) => {
+const fetchCategoryFromNewsAPI = async (category, country = 'us', language = 'en') => {
   if (!NEWS_API_KEY) {
     throw new Error('NEWS_API_KEY is not set in the backend .env file');
   }
 
+  const newsdataCategory = CATEGORY_MAP[category.toLowerCase()];
+  if (!newsdataCategory) {
+    // Not a newsdata.io-supported category (likely a custom
+    // admin-created one) — nothing to ingest for it.
+    return [];
+  }
+
   const cleanKey = NEWS_API_KEY.trim();
 
-  try {
-    const response = await axios.get(`${NEWS_API_URL}/top-headlines`, {
-      params: { category, country, pageSize, apiKey: cleanKey },
-      headers: { 'User-Agent': 'NewsIngestionService/1.0' }
-    });
-    return response.data.articles || [];
-  } catch (error) {
-    throw error;
+  const response = await axios.get(`${NEWS_API_URL}/latest`, {
+    params: {
+      apikey: cleanKey,
+      category: newsdataCategory,
+      country,
+      language,
+    },
+  });
+
+  if (response.data.status !== 'success') {
+    throw new Error(response.data.message || 'newsdata.io request failed');
   }
+
+  return response.data.results || [];
 };
 
-// Skips articles with no title (NewsAPI occasionally returns "[Removed]"
-// placeholder entries) and skips anything already stored (matched by
-// title, same convention as createNews's own duplicate check).
+// Skips articles with no title and skips anything already stored
+// (matched by title, same convention as createNews's own duplicate
+// check).
 //
 // For every genuinely NEW article stored, also fires
 // sendCategoryNotifications so subscribers actually get notified about
@@ -65,7 +63,7 @@ const storeArticles = async (articles, category) => {
   let skipped = 0;
 
   for (const article of articles) {
-    if (!article.title || article.title === '[Removed]') {
+    if (!article.title) {
       skipped++;
       continue;
     }
@@ -88,7 +86,7 @@ const ingestCategory = async (category, options = {}) => {
   const articles = await fetchCategoryFromNewsAPI(
     category,
     options.country,
-    options.pageSize
+    options.language
   );
   return storeArticles(articles, category);
 };

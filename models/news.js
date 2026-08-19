@@ -28,9 +28,22 @@ const newsSchema = new mongoose.Schema(
       type: String,
       required: true,
     },
-     image: {
+
+    // Article thumbnail/hero image. Populated from NewsAPI's urlToImage
+    // during ingestion (see newsIngestionService.js's mapArticle()).
+    image: {
       type: String,
       default: "",
+    },
+
+    author: {
+      type: String,
+      default: "Unknown",
+    },
+
+    tags: {
+      type: [String],
+      default: [],
     },
 
     // Used by Admin Dashboard
